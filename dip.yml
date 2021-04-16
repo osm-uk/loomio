@@ -1,0 +1,87 @@
+version: '6.1'
+
+environment:
+  RAILS_ENV: development
+
+compose:
+  files:
+    - docker-compose.yml
+
+interaction:
+  bash:
+    description: Run an arbitrary script within a container (or open a shell without deps)
+    service: runner
+    command: /bin/bash
+    compose_run_options: [no-deps]
+
+  bundle:
+    description: Run Bundler commands
+    service: runner
+    command: bundle
+    compose_run_options: [no-deps]
+      
+  psql:
+    description: Run psql console
+    service: postgres
+    command: psql -h postgres -U postgres -d loomio_development
+     
+  rake:
+    description: Run Rake commands
+    service: runner
+    command: bundle exec rake
+
+  rails:
+    description: Run Rails commands
+    service: runner
+    command: bundle exec rails
+    subcommands:
+      s:
+        description: Run Rails server available at http://localhost:3030
+        service: rails
+        compose:
+          run_options: [service-ports, use-aliases]
+
+  'redis-cli':
+    description: Run Redis console
+    service: redis
+    command: redis-cli -h redis
+
+  rspec:
+    description: Run Rails tests
+    service: runner
+    environment:
+      RAILS_ENV: test
+    command: bundle exec rspec
+
+  rubocop:
+    description: Run Rubocop
+    service: runner
+    command: bundle exec rubocop
+    compose_run_options: [no-deps]
+
+  sh:
+    description: Open a Bash shell within a Rails container (with dependencies up)
+    service: runner
+    command: /bin/bash
+
+  test:
+    description: Run Rails tests
+    service: runner
+    environment:
+      RAILS_ENV: test
+    command: rails test
+        
+  yarn:
+    description: Run Yarn commands
+    service: runner
+    command: yarn
+    compose_run_options: [no-deps]
+
+provision:
+  - dip compose down --volumes
+  - dip compose up -d postgres redis
+  - dip bundle install
+  - dip yarn install
+#  - cp config/database.example.yml config/database.yml
+  - dip rails db:prepare
+  - dip rails db:test:prepare RAILS_ENV=test
