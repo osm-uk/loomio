@@ -7,11 +7,13 @@ class Group < ApplicationRecord
   include MessageChannel
   include GroupPrivacy
   include HasEvents
+  include Translatable
 
   extend HasTokens
   extend NoSpam
 
   is_rich_text    on: :description
+  is_translatable on: :description
   initialized_with_token :token
   no_spam_for :name, :description
 
@@ -19,28 +21,35 @@ class Group < ApplicationRecord
   alias_method :author, :creator
 
   belongs_to :parent, class_name: 'Group'
+  scope :dangling, -> { joins('left join groups parents on parents.id = groups.parent_id').where('groups.parent_id is not null and parents.id is null')  }
+  scope :empty_no_subscription, -> { joins('left join subscriptions on subscription_id = groups.subscription_id').where('subscriptions.id is null and groups.parent_id is null').where('memberships_count < 2 AND discussions_count < 3 and polls_count < 2 and subgroups_count = 0').where('groups.created_at < ?', 1.year.ago) }
+  scope :expired_trial, -> { joins(:subscription).where('subscriptions.plan = ?', 'trial').where('subscriptions.expires_at < ?', 12.months.ago) }
+  scope :any_trial, -> { joins(:subscription).where('subscriptions.plan = ?', 'trial') }
+  scope :expired_demo, -> { joins(:subscription).where('subscriptions.plan = ?', 'demo').where('groups.created_at < ?', 7.days.ago) }
+  scope :not_demo, -> { joins(:subscription).where('subscriptions.plan != ?', 'demo') }
 
-  has_many :discussions,             foreign_key: :group_id, dependent: :destroy
-  has_many :public_discussions, -> { visible_to_public }, foreign_key: :group_id, dependent: :destroy, class_name: 'Discussion'
+  has_many :discussions, dependent: :destroy
+  has_many :discussion_templates, dependent: :destroy
+  has_many :public_discussions, -> { visible_to_public }, foreign_key: :group_id, class_name: 'Discussion'
   has_many :comments, through: :discussions
 
   has_many :all_memberships, dependent: :destroy, class_name: 'Membership'
   has_many :all_members, through: :all_memberships, source: :user
 
-  has_many :memberships, -> { where archived_at: nil }
+  has_many :memberships, -> { active }
   has_many :members, through: :memberships, source: :user
 
-  has_many :accepted_memberships, -> { accepted }, class_name: 'Membership'
+  has_many :accepted_memberships, -> { active.accepted }, class_name: "Membership"
   has_many :accepted_members, through: :accepted_memberships, source: :user
 
-  has_many :admin_memberships, -> { where admin: true, archived_at: nil }, class_name: 'Membership'
+  has_many :admin_memberships, -> { active.where(admin: true) }, class_name: 'Membership'
   has_many :admins, through: :admin_memberships, source: :user
 
   has_many :membership_requests, dependent: :destroy
   has_many :pending_membership_requests, -> { where response: nil }, class_name: 'MembershipRequest'
 
-  has_many :polls, foreign_key: :group_id, dependent: :destroy
-  has_many :public_polls, through: :public_discussions, dependent: :destroy, source: :polls
+  has_many :polls, dependent: :destroy
+  has_many :poll_templates, dependent: :destroy
 
   has_many :documents, as: :model, dependent: :destroy
   has_many :requested_users, through: :membership_requests, source: :user
@@ -49,20 +58,13 @@ class Group < ApplicationRecord
 
   has_many :group_identities, dependent: :destroy, foreign_key: :group_id
   has_many :identities, through: :group_identities
-  has_many :webhooks, foreign_key: 'group_id'
+  has_many :chatbots, dependent: :destroy
 
   has_many :discussion_documents,        through: :discussions,        source: :documents
   has_many :poll_documents,              through: :polls,              source: :documents
   has_many :comment_documents,           through: :comments,           source: :documents
-  has_many :public_discussion_documents, through: :public_discussions, source: :documents
-  has_many :public_poll_documents,       through: :public_polls,       source: :documents
-  has_many :public_comment_documents,    through: :public_comments,    source: :documents
   has_many :tags, foreign_key: :group_id
 
-  has_one :saml_provider, required: false, foreign_key: :group_id
-  has_one :group_survey, required: false, foreign_key: :group_id
-
-  belongs_to :default_group_cover
   belongs_to :subscription
 
   has_many :subgroups,
@@ -72,7 +74,7 @@ class Group < ApplicationRecord
   has_many :all_subgroups, dependent: :destroy, class_name: 'Group', foreign_key: :parent_id
   include GroupExportRelations
 
-  scope :with_serializer_includes, -> { includes(:default_group_cover, :subscription) }
+  scope :with_serializer_includes, -> { includes(:subscription) }
   scope :archived, -> { where('archived_at IS NOT NULL') }
   scope :published, -> { where(archived_at: nil) }
   scope :parents_only, -> { where(parent_id: nil) }
@@ -103,45 +105,28 @@ class Group < ApplicationRecord
   validates :handle, uniqueness: true, allow_nil: true
 
   delegate :locale, to: :creator, allow_nil: true
+  delegate :time_zone, to: :creator, allow_nil: true
+  delegate :date_time_pref, to: :creator, allow_nil: true
 
-  define_counter_cache(:polls_count)               { |g| g.polls.count }
-  define_counter_cache(:closed_polls_count)        { |g| g.polls.closed.count }
-  define_counter_cache(:memberships_count)         { |g| g.memberships.count }
-  define_counter_cache(:pending_memberships_count) { |g| g.memberships.pending.count }
-  define_counter_cache(:admin_memberships_count)   { |g| g.admin_memberships.count }
-  define_counter_cache(:public_discussions_count)  { |g| g.discussions.visible_to_public.count }
-  define_counter_cache(:discussions_count)         { |g| g.discussions.kept.count }
-  define_counter_cache(:open_discussions_count)    { |g| g.discussions.is_open.count }
-  define_counter_cache(:closed_discussions_count)  { |g| g.discussions.is_closed.count }
-  define_counter_cache(:subgroups_count)           { |g| g.subgroups.published.count }
+  define_counter_cache(:polls_count)                { |g| g.polls.count }
+  define_counter_cache(:closed_polls_count)         { |g| g.polls.closed.count }
+  define_counter_cache(:poll_templates_count)       { |g| g.poll_templates.kept.count }
+  define_counter_cache(:memberships_count)          { |g| g.memberships.count }
+  define_counter_cache(:pending_memberships_count)  { |g| g.memberships.pending.count }
+  define_counter_cache(:admin_memberships_count)    { |g| g.admin_memberships.count }
+  define_counter_cache(:public_discussions_count)   { |g| g.discussions.visible_to_public.count }
+  define_counter_cache(:discussions_count)          { |g| g.discussions.kept.count }
+  define_counter_cache(:open_discussions_count)     { |g| g.discussions.is_open.count }
+  define_counter_cache(:closed_discussions_count)   { |g| g.discussions.is_closed.count }
+  define_counter_cache(:discussion_templates_count) { |g| g.discussion_templates.kept.count }
+  define_counter_cache(:subgroups_count)            { |g| g.subgroups.published.count }
   update_counter_cache(:parent, :subgroups_count)
 
   delegate :include?, to: :users, prefix: true
   delegate :members, to: :parent, prefix: true
 
-  delegate :slack_team_id, to: :slack_identity, allow_nil: true
-  delegate :slack_channel_id, to: :slack_identity, allow_nil: true
-  delegate :slack_team_name, to: :slack_identity, allow_nil: true
-  delegate :slack_channel_name, to: :slack_identity, allow_nil: true
-
-  has_attached_file    :cover_photo,
-                       url: "/system/groups/:attachment/:id_partition/:style/:filename",
-                       styles: {largedesktop: "1400x320#", desktop: "970x200#", card: "460x94#"},
-                       default_url: :default_cover_photo
-  has_attached_file    :logo,
-                       url: "/system/groups/:attachment/:id_partition/:style/:filename",
-                       styles: { card: "67x67#", medium: "100x100#" },
-                       default_url: AppConfig.theme[:icon_src]
-
-  validates_attachment :cover_photo,
-    size: { in: 0..100.megabytes },
-    content_type: { content_type: /\Aimage/ },
-    file_name: { matches: [/png\Z/i, /jpe?g\Z/i, /gif\Z/i] }
-
-  validates_attachment :logo,
-    size: { in: 0..100.megabytes },
-    content_type: { content_type: /\Aimage/ },
-    file_name: { matches: [/png\Z/i, /jpe?g\Z/i, /gif\Z/i] }
+  has_one_attached :cover_photo, dependent: :detach
+  has_one_attached :logo, dependent: :detach
 
   has_paper_trail only: [:name,
                          :parent_id,
@@ -173,10 +158,46 @@ class Group < ApplicationRecord
   validates :description, length: { maximum: Rails.application.secrets.max_message_length }
   before_validation :ensure_handle_is_not_empty
 
+  def logo_url(size = 512)
+    return nil unless logo.attached?
+    size = size.to_i
+    Rails.application.routes.url_helpers.rails_representation_path(
+      logo.representation(resize_to_limit: [size,size], saver: {quality: 80, strip: true}),
+      only_path: true
+    )
+  rescue ActiveStorage::UnrepresentableError
+    self.cover_photo.delete
+    nil
+  end
+
+  def cover_url(size = 512) # 2048x512 or 1024x256 normal res
+    size = size.to_i
+    return nil unless cover_photo.attached?
+    Rails.application.routes.url_helpers.rails_representation_path(
+      cover_photo.representation(HasRichText::PREVIEW_OPTIONS.merge(resize_to_limit: [size*4,size])),
+      only_path: true
+    )
+  rescue ActiveStorage::UnrepresentableError
+    self.cover_photo.delete
+    nil
+  end
+
+  def self_or_parent_logo_url(size = 512)
+    logo_url(size) || (parent && parent.logo_url(size))
+  end
+
+  def self_or_parent_cover_url(size = 512)
+    cover_url(size) || (parent && parent.cover_url(size))
+  end
+
   def existing_member_ids
     member_ids
   end
 
+  def author_id
+    creator_id
+  end
+  
   def user_id
     creator_id
   end
@@ -197,13 +218,14 @@ class Group < ApplicationRecord
     nil
   end
 
-  def mailer
-    GroupMailer
-  end
-
   def title
     name
   end
+
+  def guests
+    User.none
+  end
+
   def message_channel
     "/group-#{self.key}"
   end
@@ -218,10 +240,18 @@ class Group < ApplicationRecord
 
   def add_member!(user, inviter: nil)
     save! unless persisted?
-    self.memberships.find_or_create_by!(user: user) do |m|
-      m.inviter     = inviter
-      m.accepted_at = DateTime.now
+    user.save! unless user.persisted?
+
+    if membership = Membership.find_by(user_id: user.id, group_id: id)
+      if membership.revoked_at
+        membership.update(admin: false, revoked_at: nil, revoker_id: nil, accepted_at: DateTime.now, inviter: inviter)
+      end
+    else
+      membership = Membership.create!(user_id: user.id, group_id: id, inviter: inviter, accepted_at: DateTime.now)
     end
+
+    GenericWorker.perform_async('PollService', 'group_members_added', self.id)
+    membership
   rescue ActiveRecord::RecordNotUnique
     retry
   end
@@ -245,44 +275,22 @@ class Group < ApplicationRecord
     self.handle = nil if self.handle.to_s.strip == ""
   end
 
-  def logo_or_parent_logo
-    if is_parent?
-      logo
-    else
-      logo.presence || parent.logo
-    end
-  end
-
-  # default_cover_photo is the name of the proc used to determine the url for the default cover photo
-  # default_group_cover is the associated DefaultGroupCover object from which we get our default cover photo
-  def default_cover_photo
-    if is_subgroup?
-      self.parent.default_cover_photo
-    elsif self.default_group_cover
-      /^.*(?=\?)/.match(self.default_group_cover.cover_photo.url).to_s
-    else
-      AppConfig.theme[:default_group_cover_src]
-    end
-  end
-
   def archive!
     Group.where(id: id_and_subgroup_ids).update_all(archived_at: DateTime.now)
-    Membership.where(group_id: id_and_subgroup_ids).update_all(archived_at: DateTime.now)
     reload
   end
 
   def unarchive!
-    Group.where(id: all_subgroup_ids.concat([id])).update_all(archived_at: nil)
-    Membership.where(group_id: all_subgroup_ids.concat([id])).update_all(archived_at: nil)
+    Group.where(id: id_and_subgroup_ids).update_all(archived_at: nil)
     reload
   end
 
   def org_memberships_count
-    Membership.not_archived.where(group_id: id_and_subgroup_ids).count('distinct user_id')
+    Membership.active.where(group_id: id_and_subgroup_ids).count('distinct user_id')
   end
 
   def org_members_count
-    Membership.active.where(group_id: id_and_subgroup_ids).count('distinct user_id')
+    Membership.active.accepted.where(group_id: id_and_subgroup_ids).count('distinct user_id')
   end
 
   def org_discussions_count
@@ -293,10 +301,10 @@ class Group < ApplicationRecord
     Group.where(id: id_and_subgroup_ids).sum(:polls_count)
   end
 
-  def has_max_members
+  def is_trial_or_demo?
     parent_group = parent_or_self
     subscription = Subscription.for(parent_group)
-    subscription.max_members && parent_group.org_memberships_count >= subscription.max_members
+    ['trial', 'demo'].include?(subscription.plan)
   end
 
   def is_subgroup_of_hidden_parent?
@@ -317,25 +325,139 @@ class Group < ApplicationRecord
 
   def full_name
     if is_subgroup?
-      [parent.name, name].join(' - ')
+      [parent&.name, name].compact.join(' - ')
     else
       name
     end
   end
 
   def id_and_subgroup_ids
-    subgroup_ids.concat([id]).compact
-  end
-
-  def slack_identity
-    identity_for(:slack)
+    subgroup_ids.concat([id]).compact.uniq
   end
 
   def identity_for(type)
     group_identities.joins(:identity).find_by("omniauth_identities.identity_type": type)
   end
 
+  def poll_template_positions
+    self[:info]['poll_template_positions'] ||= {
+      'check' => 1,
+      'advice' => 2,
+      'consent' => 3,
+      'consensus' => 4,
+      'poll' => 5,
+      'score' => 6,
+      'dot_vote' => 7,
+      'ranked_choice' => 8,
+      'meeting' => 9,
+    }
+    self[:info]['poll_template_positions']
+  end
+
+  def categorize_poll_templates
+    if self[:info].has_key? 'categorize_poll_templates'
+      self[:info]['categorize_poll_templates']
+    else
+      true
+    end
+  end
+
+  def category=(val)
+    self[:info]['category'] = val
+  end
+
+  def category
+    self[:info]['category']
+  end
+
+  def categorize_poll_templates=(val)
+    self[:info]['categorize_poll_templates'] = val
+  end
+
+  def hidden_poll_templates
+    self[:info]['hidden_poll_templates'] ||= AppConfig.app_features.fetch(:hidden_poll_templates, [])
+    self[:info]['hidden_poll_templates']
+  end
+
+  def hidden_poll_templates=(val)
+    self[:info]['hidden_poll_templates'] = val
+  end
+
+  def self.ransackable_attributes(auth_object = nil)
+    [
+    "admin_memberships_count",
+    "admin_tags",
+    "admins_can_edit_user_content",
+    "archived_at",
+    "attachments",
+    "category_id",
+    "city",
+    "closed_discussions_count",
+    "closed_motions_count",
+    "closed_polls_count",
+    "cohort_id",
+    "content_locale",
+    "country",
+    "cover_photo_content_type",
+    "cover_photo_file_name",
+    "cover_photo_file_size",
+    "cover_photo_updated_at",
+    "created_at",
+    "creator_id",
+    "default_group_cover_id",
+    "description",
+    "description_format",
+    "discussion_privacy_options",
+    "discussions_count",
+    "full_name",
+    "handle",
+    "id",
+    "invitations_count",
+    "is_referral",
+    "is_visible_to_parent_members",
+    "is_visible_to_public",
+    "key",
+    "listed_in_explore",
+    "logo_content_type",
+    "logo_file_name",
+    "logo_file_size",
+    "logo_updated_at",
+    "members_can_add_guests",
+    "members_can_add_members",
+    "members_can_announce",
+    "members_can_create_subgroups",
+    "members_can_delete_comments",
+    "members_can_edit_comments",
+    "members_can_edit_discussions",
+    "members_can_raise_motions",
+    "members_can_start_discussions",
+    "members_can_vote",
+    "membership_granted_upon",
+    "memberships_count",
+    "name",
+    "new_threads_max_depth",
+    "new_threads_newest_first",
+    "open_discussions_count",
+    "parent_id",
+    "parent_members_can_see_discussions",
+    "pending_memberships_count",
+    "poll_templates_count",
+    "polls_count",
+    "proposal_outcomes_count",
+    "public_discussions_count",
+    "recent_activity_count",
+    "region",
+    "subgroups_count",
+    "subscription_id",
+    "template_discussions_count",
+    "theme_id",
+    "updated_at"]
+  end
+
   private
+  def variant_path(variant)
+    Rails.application.routes.url_helpers.rails_representation_path(variant, only_path: true)
+  end
 
   def handle_is_valid
     self.handle = nil if self.handle.to_s.strip == "" || (is_subgroup? && parent.handle.nil?)

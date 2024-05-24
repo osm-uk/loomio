@@ -3,9 +3,8 @@ te:
     members: "సభ్యులు"
   loomio_tags:
     name_label: పేరు
-  reactions:
-    ok_hand: సరే
   common:
+    version: రూపాంతరం
     you: మీరు
     ok_got_it: సరే, అర్థమయింది
     learn_more: మరింత తెలుసుకోండి
@@ -27,8 +26,6 @@ te:
       thisweek: 'ఈ వారం'
       thismonth: 'ఈ నెల'
     more_help: 'మరింత సహాయం'
-    models:
-      proposal: 'ప్రతిపాదన'
     copy: 'కాపీ చేయి'
     total: మొత్తం
     action:
@@ -84,8 +81,6 @@ te:
     invitations: "ఆహ్వానాలు"
   membership_dropdown:
     cancel_invitation: ఆహ్వానం రద్దుచేయి
-  notification_models:
-    poll: 'నిర్ణయం:'
   notifications:
     header: "గమనికలు"
   discussion_form:
@@ -98,6 +93,8 @@ te:
     form:
       invitation_message_label: సందేశం
       poll_reminder:
+        message_label: సందేశం
+      wip_poll_reminder:
         message_label: సందేశం
   join_group_button:
     membership_requested: సభ్యత్వం అభ్యర్థించబడింది
@@ -158,7 +155,6 @@ te:
     delete_thread: 'తొలగించు'
   delete_comment_dialog:
     title: 'వ్యాఖ్యను తొలగించు'
-    confirm: 'వ్యాఖ్యను తొలగించు'
   contact_message_form:
     name_label: 'మీ పేరు'
     subject_label: "విషయం"
@@ -178,6 +174,9 @@ te:
   poll_common_form:
     closed: మూసివేయబడింది
     update: తాజాకరించు
+  poll_proposal_options:
+    'yes': 'అవును'
+    'no': 'కాదు'
   poll_count_options:
     'yes': 'అవును'
     'no': 'కాదు'
@@ -185,12 +184,10 @@ te:
     total: మొత్తం
   auth_form:
     name_placeholder: మీ పేరు
+  chatbot:
+    password: సంకేతపదం
   webhook:
     name_label: పేరు
   group_survey:
     categories:
-      other: ఇతరాలు
-    uses:
-      other: ఇతరాలు
-    referrers:
       other: ఇతరాలు

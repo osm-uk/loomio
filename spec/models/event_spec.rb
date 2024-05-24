@@ -18,14 +18,22 @@ describe Event do
   let(:user_unsubscribed) { create :user, name: 'user unsubscribed' }
 
   let(:author) { create :user }
-  let(:discussion) { create :discussion, description: user_mentioned_text, author: author }
+  let(:discussion) { create :discussion, description: user_mentioned_text, description_format: 'md', author: author }
   let(:mentioned_user) {create :user, username: 'sam', email_when_mentioned: true }
   let(:parent_comment) { create :comment, discussion: discussion}
   let(:comment) { create :comment, parent: parent_comment, discussion: discussion, body: 'hey @sam' }
   let(:poll) { create :poll, discussion: discussion, details: user_mentioned_text, author: author }
-  let!(:markdown_webhook) { create(:webhook, group: discussion.group, format: 'markdown') }
-  let!(:slack_webhook) { create(:webhook, group: discussion.group, format: 'slack') }
-  let!(:microsoft_webhook) { create(:webhook, group: discussion.group, format: 'microsoft') }
+  let!(:markdown_webhook) { create(:chatbot, group: discussion.group, webhook_kind: 'markdown', kind: 'webhook', event_kinds: %w[
+      new_discussion
+      discussion_edited
+      poll_created
+      poll_edited
+      poll_closing_soon
+      poll_expired
+      poll_announced
+      poll_reopened
+      outcome_created
+    ]) }
 
   def emails_sent
     ActionMailer::Base.deliveries.count
@@ -128,7 +136,6 @@ describe Event do
     #
     #   expect(DiscussionReader.where(discussion_id: discussion.id).count).to eq 2
     #
-    #   byebug
     #   email_users = Events::NewDiscussion.last.send(:email_recipients)
     #   expect(email_users.length).to eq 1
     #   expect(email_users).to include user_thread_normal
@@ -148,7 +155,7 @@ describe Event do
 
     it 'notifies webhook if one exists' do
       Events::PollCreated.publish!(poll, poll.author)
-      expect(WebMock).to have_requested(:post, markdown_webhook.url).at_least_once
+      expect(WebMock).to have_requested(:post, markdown_webhook.server).at_least_once
     end
   end
 
@@ -264,7 +271,8 @@ describe Event do
     let(:poll_meeting) { create :poll_meeting, discussion: discussion }
 
     before do
-      outcome.update(poll: poll_meeting, calendar_invite: "SOME_EVENT_INFO")
+      poll_meeting.create_missing_created_event!
+      outcome.update(poll: poll_meeting)
     end
 
     it 'notifies mentioned users and the author' do
@@ -315,6 +323,11 @@ describe Event do
     let(:poll_meeting) { create :poll_meeting, discussion: discussion }
     let(:outcome) { create :outcome, poll: poll_meeting }
 
+    before do
+      poll.create_missing_created_event!
+      poll_meeting.create_missing_created_event!
+    end
+    
     def stance_for(user)
       Stance.create(participant: user, poll: poll)
     end
@@ -322,14 +335,13 @@ describe Event do
     it 'does not email people with stance volume quiet' do
       stance = Stance.create(participant: user_thread_normal, poll: poll, volume: :quiet)
       expect {
-        Events::PollAnnounced.publish!(poll, poll.author, [stance])
+        Events::PollAnnounced.publish!(poll: poll, actor: poll.author, stances: [stance])
       }.to_not change { emails_sent }
     end
 
     it 'sends invitations' do
-      stance = Stance.create(participant: user_thread_normal, poll: poll)
       expect {
-        Events::PollAnnounced.publish!(poll, poll.author, [stance_for(user_thread_normal)])
+        Events::PollAnnounced.publish!(poll: poll, actor: poll.author, stances: [stance_for(user_thread_normal)])
       }.to change { emails_sent }.by(1)
     end
 
@@ -340,7 +352,7 @@ describe Event do
     end
 
     it 'can send an ical attachment with an outcome' do
-      outcome.update(poll: poll_meeting, calendar_invite: "SOME_EVENT_INFO")
+      outcome.update(poll: poll_meeting, poll_option_id: poll_meeting.poll_option_ids.first)
       expect {
         Events::OutcomeCreated.publish!(outcome: outcome, recipient_user_ids: [poll.author.id, user_thread_normal.id])
       }.to change { emails_sent }

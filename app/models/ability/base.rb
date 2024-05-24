@@ -2,7 +2,6 @@ module Ability
   class Base
     include CanCan::Ability
     prepend Ability::Comment
-    prepend Ability::ContactRequest
     prepend Ability::DiscussionReader
     prepend Ability::Discussion
     prepend Ability::Document
@@ -17,9 +16,11 @@ module Ability
     prepend Ability::User
     prepend Ability::Tag
     prepend Ability::Event
-    prepend Ability::Webhook
+    prepend Ability::Chatbot
     prepend Ability::Attachment
-
+    prepend Ability::Task
+    prepend Ability::PollTemplate
+    prepend Ability::DiscussionTemplate
 
     def initialize(user)
       @user = user

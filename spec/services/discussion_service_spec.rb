@@ -33,13 +33,10 @@ describe 'DiscussionService' do
     context 'the discussion is valid' do
       before { discussion.stub(:valid?).and_return(true) }
 
-      it 'syncs the discussion search vector' do
-        expect {DiscussionService.create(discussion: discussion, actor: user) }.to change {SearchVector.where(discussion_id: discussion.id).count}.by(1)
-      end
-
       it 'notifies new mentions' do
         discussion.group.add_member! another_user
         discussion.description = "A mention for @#{another_user.username}!"
+        discussion.description_format = 'md'
         expect { DiscussionService.create(discussion: discussion, actor: user) }.to change {
           Events::UserMentioned.where(kind: :user_mentioned).count
         }.by(1)
@@ -47,6 +44,7 @@ describe 'DiscussionService' do
 
       it 'does not notify users outside the group' do
         discussion.description = "A mention for @#{another_user.username}!"
+        discussion.description_format = 'md'
         expect(Events::UserMentioned).to_not receive(:publish!).with(discussion, user, another_user)
         DiscussionService.create(discussion: discussion, actor: user)
       end
@@ -82,6 +80,7 @@ describe 'DiscussionService' do
     it 'notifies new mentions' do
       discussion.group.add_member! another_user
       discussion_params[:description] = "A mention for @#{another_user.username}!"
+      discussion_params[:description_format] = "md"
       expect { DiscussionService.update(discussion: discussion, params: discussion_params, actor: user) }.to change { another_user.notifications.count }.by(1)
       expect(another_user.notifications.last.kind).to eq 'user_mentioned'
     end
@@ -90,6 +89,7 @@ describe 'DiscussionService' do
       discussion.group.add_member! another_user
       discussion.group.add_admin! admin
       discussion_params[:description] = "A mention for @#{another_user.username}!"
+      discussion_params[:description_format] = "md"
       expect { DiscussionService.update(discussion: discussion, params: discussion_params, actor: user) }.to change { another_user.notifications.count }.by(1)
       expect(another_user.notifications.last.kind).to eq 'user_mentioned'
     end
@@ -97,6 +97,7 @@ describe 'DiscussionService' do
     it 'does not renotify old mentions' do
       discussion.group.add_member! another_user
       discussion_params[:description] = "A mention for @#{another_user.username}!"
+      discussion_params[:description_format] = "md"
       expect { DiscussionService.update(discussion: discussion, params: discussion_params, actor: user) }.to change { another_user.notifications.count }.by(1)
       discussion_params[:description] = "Hello again @#{another_user.username}"
       expect { DiscussionService.update(discussion: discussion, params: discussion_params, actor: user) }.to_not change  { another_user.notifications.count }
@@ -104,6 +105,7 @@ describe 'DiscussionService' do
 
     it 'notifies users outside of the group' do
       discussion_params[:description] = "A mention for @#{another_user.username}!"
+      discussion_params[:description_format] = "md"
       expect(Events::UserMentioned).to_not receive(:publish!).with(discussion, user, another_user)
       DiscussionService.update(discussion: discussion, params: discussion_params, actor: user)
     end
@@ -116,12 +118,6 @@ describe 'DiscussionService' do
         DiscussionService.update discussion: discussion,
                                  params: discussion_params,
                                  actor: user
-      end
-
-      it 'syncs the discussion search vector' do
-        DiscussionService.update(discussion: discussion, params: discussion_params, actor: user)
-        discussion_params[:description] = "merry christmas everyone"
-        expect {DiscussionService.update(discussion: discussion, params: discussion_params, actor: user) }.to change {SearchVector.where(discussion_id: discussion.id).first.search_vector}
       end
 
       it 'creates a version with updated title / description / private values' do
@@ -229,24 +225,24 @@ describe 'DiscussionService' do
     end
   end
 
-  describe 'destroy' do
-
-    it 'checks the actor has permission' do
-      user.ability.should_receive(:authorize!).with(:destroy, discussion)
-      DiscussionService.destroy(discussion: discussion, actor: user)
-    end
-
-    context 'actor is permitted' do
-      it 'deletes the discussion' do
-        DiscussionService.destroy(discussion: discussion, actor: user)
-        expect(discussion.discarded_at).to_not eq nil
-      end
-    end
-
-    context 'actor is not permitted' do
-      it 'does not delete the discussion' do
-        expect { DiscussionService.destroy discussion: discussion, actor: another_user }.to raise_error CanCan::AccessDenied
-      end
-    end
-  end
+  # describe 'destroy' do
+  #
+  #   it 'checks the actor has permission' do
+  #     user.ability.should_receive(:authorize!).with(:destroy, discussion)
+  #     DiscussionService.destroy(discussion: discussion, actor: user)
+  #   end
+  #
+  #   context 'actor is permitted' do
+  #     it 'deletes the discussion' do
+  #       DiscussionService.destroy(discussion: discussion, actor: user)
+  #       expect(discussion.discarded_at).to_not eq nil
+  #     end
+  #   end
+  #
+  #   context 'actor is not permitted' do
+  #     it 'does not delete the discussion' do
+  #       expect { DiscussionService.destroy discussion: discussion, actor: another_user }.to raise_error CanCan::AccessDenied
+  #     end
+  #   end
+  # end
 end

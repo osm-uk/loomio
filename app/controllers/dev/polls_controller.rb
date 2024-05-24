@@ -1,18 +1,18 @@
 class Dev::PollsController < Dev::NightwatchController
-  include Dev::PollsHelper
-  include Dev::PollsScenarioHelper
+  include Dev::ScenariosHelper
 
   def test_poll_scenario
-
-    scenario = send(:"#{params[:scenario]}_scenario", {
+    scenario =send(:"#{params[:scenario]}_scenario", {
                       poll_type: params[:poll_type],
                       anonymous: !!params[:anonymous],
-                      hide_results_until_closed: !!params[:hide_results_until_closed],
+                      hide_results: (params[:hide_results] || :off),
                       admin: !!params[:admin],
                       guest: !!params[:guest],
                       standalone: !!params[:standalone],
                       wip: !!params[:wip]
                     })
+
+    scenario[:group].add_admin! scenario[:observer]
 
     sign_in(scenario[:observer]) if scenario[:observer].is_a?(User)
 
@@ -42,9 +42,12 @@ class Dev::PollsController < Dev::NightwatchController
 
     # select poll type here
     poll = fake_poll(group: group, discussion: discussion, author: admin)
-    PollService.create(poll: poll, actor: poll.author)
+    PollService.create(poll: poll, actor: poll.author, params: {notify_recipients: true})
 
-    PollService.invite(poll: poll, params: {recipient_emails: [user.email]}, actor: poll.author)
+    if params[:guest]
+      PollService.invite(poll: poll, params: {recipient_emails: [user.email], notify_recipients: true}, actor: poll.author)
+    end
+
     last_email
   end
 
@@ -82,5 +85,52 @@ class Dev::PollsController < Dev::NightwatchController
     sign_in user
     create_activity_items(discussion: discussion, actor: user)
     redirect_to discussion_url(discussion)
+  end
+
+  private
+
+  def create_activity_items(discussion: , actor: )
+    # create poll
+    options = {poll: %w[apple turnip peach],
+               count: %w[yes no],
+               proposal: %w[agree disagree abstain block],
+               dot_vote: %w[birds bees trees]}
+
+    AppConfig.poll_types.keys.each do |poll_type|
+      poll = Poll.new(poll_type: poll_type,
+                      title: poll_type,
+                      details: 'fine print',
+                      poll_option_names: options[poll_type.to_sym],
+                      discussion: discussion)
+      PollService.create(poll: poll, actor: actor)
+
+      # edit the poll
+      PollService.update(poll: poll, params: {title: 'choose!'}, actor: actor)
+
+      # vote on the poll
+      stance = Stance.new(poll: poll,
+                          choice: poll.poll_option_names.first,
+                          reason: 'democracy is in my shoes')
+      StanceService.create(stance: stance, actor: actor)
+
+      # close the poll
+      PollService.close(poll: poll, actor: actor)
+
+      # set an outcome
+      outcome = Outcome.new(poll: poll, statement: 'We all voted')
+      OutcomeService.create(outcome: outcome, actor: actor)
+
+      # create poll
+      poll = Poll.new(poll_type: poll_type,
+                      title: 'Which one?',
+                      details: 'fine print',
+                      poll_option_names: options[poll_type.to_sym],
+                      discussion: discussion)
+      PollService.create(poll: poll, actor: actor)
+      poll.update_attribute(:closing_at, 1.day.ago)
+
+      # expire the poll
+      PollService.expire_lapsed_polls
+    end
   end
 end

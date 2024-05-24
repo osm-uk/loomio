@@ -1,9 +1,14 @@
 gl:
+  templates:
+    try_loomio: Proba Loomio
   subscription_status:
     members: "Membros"
   loomio_tags:
     name_label: Nome
   common:
+    please_wait: Agarde, por favor
+    version: Versión
+    or: ou
     time:
       am: am
       pm: pm
@@ -15,8 +20,6 @@ gl:
       private: 'Privado'
     date_range:
       today: 'Hoxe'
-    models:
-      proposal: 'Proposta'
     action:
       search: 'Buscar'
       save: 'Gardar'
@@ -24,6 +27,7 @@ gl:
       like: 'Gústame'
       unlike: 'Desgustar'
       cancel: 'Cancelar'
+      clear: Eliminar
   emoji_picker:
     search: Buscar
   error_page:
@@ -58,6 +62,8 @@ gl:
     form:
       invitation_message_label: Mensaxe
       poll_reminder:
+        message_label: Mensaxe
+      wip_poll_reminder:
         message_label: Mensaxe
   action_dock:
     edited: Editado
@@ -101,6 +107,14 @@ gl:
     locale_label: 'Lingua'
   change_picture_form:
     use_gravatar: 'Usar Gravatar'
+  email_settings_page:
+    monday: Luns
+    tuesday: Martes
+    wednesday: Mércores
+    thursday: Xoves
+    friday: Venres
+    saturday: Sábado
+    sunday: Domingo
   dashboard_page:
     aria_label: 'Panel de control'
     threads_from:
@@ -116,16 +130,11 @@ gl:
     close_thread: 'Pechar'
   delete_comment_dialog:
     title: 'Borrar comentario'
-    confirm: 'Borrar comentario'
   contact_message_form:
     name_label: 'O teu nome'
     subject_label: "Tema"
     email_label: 'A túa dirección de correo electrónico'
     message_label: 'A túa mensaxe'
-  hint:
-    discussion: 'Recomendacións para comezar un debate aberto'
-    proposal: 'Trucos para escribir unha proposta clara'
-    vote: 'Podes cambiar a proposta en calquera momento'
   poll_common:
     save_changes: Gardar
   discussions_panel:
@@ -141,18 +150,20 @@ gl:
     closed: 'Pechado'
   poll_common_form:
     closed: Pechado
+  poll_proposal_options:
+    'yes': 'Si'
+    'no': 'Non'
   poll_count_options:
     'yes': 'Si'
     'no': 'Non'
   auth_form:
     name_placeholder: O teu nome
+  chatbot:
+    username: Usuario
+    password: Contrasinal
   webhook:
     name_label: Nome
   group_survey:
     categories:
       community: Comunidade
-      other: Outro
-    uses:
-      other: Outro
-    referrers:
       other: Outro

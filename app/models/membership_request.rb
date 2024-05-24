@@ -17,6 +17,7 @@ class MembershipRequest < ApplicationRecord
 
   validates :introduction, length: { maximum: Rails.application.secrets.max_message_length }
 
+  scope :dangling, -> { joins('left join groups on groups.id = group_id').where('groups.id is null') }
   scope :pending, -> { where(response: nil).order('created_at DESC') }
   scope :responded_to, -> { where('response IS NOT ?', nil).order('responded_at DESC') }
   scope :requested_by, ->(user) { where requestor_id: user.id }
@@ -27,13 +28,21 @@ class MembershipRequest < ApplicationRecord
   delegate :name,                 to: :group, prefix: true
   delegate :mailer,               to: :group
 
-  delegate :email,                to: :requestor
-  delegate :name,                 to: :requestor
+  delegate :email,                to: :requestor, allow_nil: true
+  delegate :name,                 to: :requestor, allow_nil: true
+
+  def author_id
+    requestor_id
+  end
+  
+  def title
+    group.full_name
+  end
 
   def user_id
     requestor_id
   end
-  
+
   def approve!(responder)
     set_response_details('approved', responder)
   end

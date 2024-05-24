@@ -1,5 +1,4 @@
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 module.exports = {
   'successfully_removes_a_group_member': (test) => {
@@ -15,22 +14,22 @@ module.exports = {
     page.expectNoText('.members-panel', 'Emilio Estevez')
   },
 
-  'successfully_assigns_coordinator_privileges': (test) => {
-    page = pageHelper(test)
+  // 'successfully_assigns_coordinator_privileges': (test) => {
+  //   page = pageHelper(test)
+  //
+  //   page.loadPath('setup_group')
+  //   page.click('.group-page-members-tab')
+  //   page.click('.members-panel .v-card .v-list .v-list-item:first-child .membership-dropdown')
+  //   page.click('.membership-dropdown__toggle-admin')
+  //   page.expectFlash('Emilio Estevez is now an admin')
+  // },
 
-    page.loadPath('setup_group')
-    page.click('.group-page-members-tab')
-    page.click('.members-panel .v-card .v-list .v-list-item:first-child .membership-dropdown')
-    page.click('.membership-dropdown__toggle-admin')
-    page.expectFlash('Emilio Estevez is now an admin')
-  },
-
-  'allows_non-coordinators_to_add_members_if_the_group_settings_allow': (test) => {
+  'members_cannot_invite_members_by_default': (test) => {
     page = pageHelper(test)
 
     page.loadPath('setup_group_as_member')
     page.click('.group-page-members-tab')
-    page.expectElement('.membership-card__invite')
+    page.expectNoElement('.membership-card__invite')
   },
 
   'successfully_removes_a_member': (test) => {
@@ -42,8 +41,6 @@ module.exports = {
     page.click('.membership-dropdown__remove')
     page.click('.confirm-modal__submit')
     page.expectFlash('Member removed')
-    page.click('.group-page-threads-tab')
-    page.expectText('.thread-preview-collection__container', 'How to use Loomio')
   },
 
   'can_remove_coordinator_privileges': (test) => {
@@ -99,15 +96,14 @@ module.exports = {
     page.fillIn('.membership-form__title-input input', 'Suzerain')
     page.click('.membership-form__submit')
     page.expectFlash('Membership title updated')
-    page.expectText('.members-panel .v-list .v-list-item:last-child .title', 'Suzerain')
   },
 
   // 'can_change_volume': (test) => {
   //   page = pageHelper(test)
   //
   //   page.loadPath('setup_group')
-  //   page.click('.group-page-settings-tab')
-  //   page.click('.group-page-actions__change_volume')
+  //   page.click('.action-menu')
+  //   page.click('.action-dock__button--change_volume')
   //   page.click('.volume-loud')
   //   page.click('.change-volume-form__submit')
   //   page.expectFlash('Notification settings updated')

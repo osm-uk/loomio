@@ -1,4 +1,7 @@
 ga_IE:
+  discussion_templates:
+    discuss_a_topic:
+      title_placeholder: Cad é an t-ábhar is mian leat a phlé?
   errors:
     404:
       title: Níor aimsíodh é
@@ -15,6 +18,7 @@ ga_IE:
     export:
       title: Teideal
       author: Údar
+      email: Seoladh ríomhphoist
       details: Sonraí
       group_name: Ainm na baicle
       total: Iomlán
@@ -38,7 +42,3 @@ ga_IE:
     public_groups: Baiclí poiblí
     terms: Coinníollacha
     independent_install_html: 'Tá leagan neamhspleách de Loomio á rith ag %{hostname}: <a href="http://github.com/loomio/loomio">find out more</a>.'
-  poll_mailer:
-    common:
-      unsubscribe: Díliostáil
-  comment_by: Trácht ó %{comment_author}

@@ -12,12 +12,13 @@ module Dev::NintiesMoviesHelper
                               is_admin: false,
                               username: 'patrickswayze',
                               password: 'gh0stmovie',
-                              uploaded_avatar: File.new("#{Rails.root}/spec/fixtures/images/patrick.png"),
                               experiences: {changePicture: true},
                               detected_locale: 'en',
+                              date_time_pref: 'day_abbr',
+                              avatar_kind: 'uploaded',
                               email_verified: true)
-
-    @patrick.update(avatar_kind: 'uploaded')
+    @patrick.uploaded_avatar.attach io: File.new("#{Rails.root}/spec/fixtures/images/patrick.png"), filename: 'patrick.jpg'
+    @patrick.update(avatar_kind: :uploaded)
     @patrick
   end
 
@@ -25,6 +26,7 @@ module Dev::NintiesMoviesHelper
     if patrick.contacts.empty?
       patrick.contacts.create(name: 'Keanu Reeves',
                               email: 'keanu@example.com',
+                              date_time_pref: 'day_abbr',
                               source: 'gmail')
     end
   end
@@ -33,11 +35,13 @@ module Dev::NintiesMoviesHelper
     @jennifer ||= User.find_by(email: 'jennifer_grey@example.com') ||
                   User.create!(name: 'Jennifer Grey',
                                email: 'jennifer_grey@example.com',
+                               date_time_pref: 'day_abbr',
                                username: 'jennifergrey',
                                experiences: {changePicture: true},
-                               uploaded_avatar: File.new("#{Rails.root}/spec/fixtures/images/jennifer.png"),
                                email_verified: true)
-    @jennifer.update(avatar_kind: 'uploaded')
+    @jennifer.uploaded_avatar.attach io: File.new("#{Rails.root}/spec/fixtures/images/jennifer.png"), filename: 'jen.jpg'
+    @jennifer.update(avatar_kind: :uploaded)
+
     @jennifer
   end
 
@@ -47,6 +51,7 @@ module Dev::NintiesMoviesHelper
                           email: 'max@example.com',
                           password: 'gh0stmovie',
                           username: 'mingthemerciless',
+                          date_time_pref: 'day_abbr',
                           email_verified: true)
     @max
   end
@@ -56,6 +61,7 @@ module Dev::NintiesMoviesHelper
                 User.create!(name: 'Emilio Estevez',
                             email: 'emilio@loomio.org',
                             password: 'gh0stmovie',
+                            date_time_pref: 'day_abbr',
                             email_verified: true)
   end
 
@@ -64,6 +70,7 @@ module Dev::NintiesMoviesHelper
               User.create!(name: 'Judd Nelson',
                            email: 'judd@example.com',
                            password: 'gh0stmovie',
+                           date_time_pref: 'day_abbr',
                            email_verified: true)
   end
 
@@ -72,15 +79,19 @@ module Dev::NintiesMoviesHelper
               User.create!(name: 'Paul Rudd',
                            email: 'rudd@example.com',
                            password: 'gh0stmovie',
+                           date_time_pref: 'day_abbr',
                            email_verified: true)
   end
 
   def create_group
     unless @group
       @group = Group.new(name: 'Dirty Dancing Shoes',
-                                  group_privacy: 'closed',
-                                  handle: 'shoes',
-                                  discussion_privacy_options: 'public_or_private', creator: patrick)
+                        description: 'The best place for dancing shoes. _every_ shoe is **dirty**!',
+                        group_privacy: 'closed',
+                        handle: 'shoes',
+                        discussion_privacy_options: 'public_or_private', creator: patrick)
+      file = open(Rails.root.join('public','brand','icon_sky_150h.png'))
+      @group.logo.attach(io: file, filename: 'logo.png')
       GroupService.create(group: @group, actor: @group.creator)
       @group.add_admin!  patrick
       @group.add_member! jennifer
@@ -94,7 +105,7 @@ module Dev::NintiesMoviesHelper
       @poll_group = Group.new(name: 'Dirty Dancing Shoes',
                              group_privacy: 'closed',
                              discussion_privacy_options: 'public_or_private',
-                             features: {use_polls: true}, creator: patrick)
+                             creator: patrick)
       GroupService.create(group: @poll_group, actor: @poll_group.creator)
       @poll_group.add_admin!  patrick
       @poll_group.add_member! jennifer
@@ -143,10 +154,7 @@ module Dev::NintiesMoviesHelper
 
   def create_discussion
     unless @discussion
-      @discussion = Discussion.create(title: 'What star sign are you?',
-                                       private: false,
-                                       group: create_group,
-                                       author: jennifer)
+      @discussion = Discussion.create(title: 'What star sign are you?', private: false, group: create_group, link_previews: [{'title': 'link title', 'url': 'https://www.example.com', 'description': 'a link to a page', 'image': 'https://www.loomio.org/theme/logo.svg', 'hostname':'www.example.com'}], author: jennifer)
       DiscussionService.create(discussion: @discussion, actor: @discussion.author)
     end
     @discussion
@@ -249,7 +257,8 @@ module Dev::NintiesMoviesHelper
       poll_type: :proposal,
       poll_option_names: %w(agree abstain disagree block),
       author: patrick,
-      title: "Let's go to the moon!"
+      title: "Let's go to the moon!",
+      closing_at: 10.days.from_now
     )
   end
 
@@ -274,7 +283,7 @@ module Dev::NintiesMoviesHelper
     # discussion_edited
     create_discussion
     create_discussion.update(title: "another discussion title")
-    Events::DiscussionEdited.publish!(discussion: create_discussion)
+    Events::DiscussionEdited.publish!(discussion: create_discussion, actor: create_discussion.author)
 
     # discussion_moved
     Events::DiscussionMoved.publish!(create_discussion, patrick, create_another_group)
@@ -287,7 +296,7 @@ module Dev::NintiesMoviesHelper
 
     # poll_edited
     create_poll.update(title: "Another poll title")
-    Events::PollEdited.publish!(create_poll, patrick)
+    Events::PollEdited.publish!(poll: create_poll, actor: patrick)
 
     # stance_created
     Events::StanceCreated.publish!(create_stance)
@@ -305,27 +314,30 @@ module Dev::NintiesMoviesHelper
 
   def create_all_notifications
     #'reaction_created'
-    comment = Comment.new(discussion: create_discussion, body: 'I\'m rather likeable')
-    reaction = Reaction.new(reactable: comment, reaction: ":heart:")
-    new_comment_event = CommentService.create(comment: comment, actor: patrick)
+    patrick_comment = Comment.new(discussion: create_discussion, body: 'I\'m rather likeable')
+    reaction = Reaction.new(reactable: patrick_comment, reaction: ":heart:")
+    new_comment_event = CommentService.create(comment: patrick_comment, actor: patrick)
     reaction_created_event = ReactionService.update(reaction: reaction, params: {reaction: ':slight_smile:'}, actor: jennifer)
     create_another_group.add_member! jennifer
 
     #'comment_replied_to'
-    reply_comment = Comment.new(discussion: create_discussion,
-                                body: 'I agree with you', parent: comment)
-    CommentService.create(comment: reply_comment, actor: jennifer)
+    jennifer_comment = Comment.new(discussion: create_discussion,
+                          parent: patrick_comment,
+                          body: 'hey @patrickswayze you look great in that tuxeido (jen reply to patrick)')
+    CommentService.create(comment: jennifer_comment, actor: jennifer)
 
     #'user_mentioned'
-    comment = Comment.new(discussion: create_discussion, body: 'hey @patrickswayze you look great in that tuxeido')
-    CommentService.create(comment: comment, actor: jennifer)
+    reply_comment = Comment.new(discussion: create_discussion,
+                                body: 'I agree with @patrickswayze (jen mention patrick)', parent: jennifer_comment)
+    CommentService.create(comment: reply_comment, actor: jennifer)
 
-    [max, emilio, judd].each {|u| comment.group.add_member! u}
-    ReactionService.update(reaction: Reaction.new(reactable: comment), params: {reaction: ':slight_smile:'}, actor: jennifer)
-    ReactionService.update(reaction: Reaction.new(reactable: comment), params: {reaction: ':heart:'}, actor: patrick)
-    ReactionService.update(reaction: Reaction.new(reactable: comment), params: {reaction: ':laughing:'}, actor: max)
-    ReactionService.update(reaction: Reaction.new(reactable: comment), params: {reaction: ':cry:'}, actor: emilio)
-    ReactionService.update(reaction: Reaction.new(reactable: comment), params: {reaction: ':wave:'}, actor: judd)
+
+    [max, emilio, judd].each {|u| patrick_comment.group.add_member! u}
+    ReactionService.update(reaction: Reaction.new(reactable: patrick_comment), params: {reaction: ':slight_smile:'}, actor: jennifer)
+    ReactionService.update(reaction: Reaction.new(reactable: patrick_comment), params: {reaction: ':heart:'}, actor: patrick)
+    ReactionService.update(reaction: Reaction.new(reactable: patrick_comment), params: {reaction: ':laughing:'}, actor: max)
+    ReactionService.update(reaction: Reaction.new(reactable: patrick_comment), params: {reaction: ':cry:'}, actor: emilio)
+    ReactionService.update(reaction: Reaction.new(reactable: patrick_comment), params: {reaction: ':wave:'}, actor: judd)
 
     #'membership_requested',
     membership_request = MembershipRequest.new(group: create_group)
@@ -380,10 +392,5 @@ module Dev::NintiesMoviesHelper
     # notify patrick that someone has voted on his proposal
     poll = FactoryBot.build(:poll, closing_at: 4.days.from_now, discussion: create_discussion, voter_can_add_options: true)
     PollService.create(poll: poll, actor: patrick)
-    jennifer_stance = FactoryBot.build(:stance, poll: poll, choice: "agree")
-    StanceService.create(stance: jennifer_stance, actor: jennifer)
-
-    # create poll_option_added event (notifying author)
-    option_added_event = PollService.add_options(poll: poll, params: {poll_option_names: "wark"}, actor: jennifer)
   end
 end

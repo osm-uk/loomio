@@ -1,6 +1,6 @@
 ActiveAdmin.register Subscription do
   includes :groups
-  actions :new, :create, :index, :show, :edit, :update, :destroy
+  actions :new, :create, :index, :show, :edit, :destroy
 
   filter :chargify_subscription_id
   filter :expires_at, as: :date_range
@@ -46,12 +46,15 @@ ActiveAdmin.register Subscription do
       row :max_threads
       row :max_members
       row :max_orgs
+      row :allow_guests
+      row :allow_subgroups
       row :info
     end
 
     panel("Refresh chargify") do
       if subscription.chargify_subscription_id
         form action: refresh_admin_subscription_path(subscription), method: :post do |f|
+          f.input type: :hidden, name: :authenticity_token
           f.input type: :submit, value: "refresh chargify"
         end
       else
@@ -69,10 +72,18 @@ ActiveAdmin.register Subscription do
       input :max_threads
       input :max_members
       input :max_orgs
+      input :allow_guests
+      input :allow_subgroups
       input :chargify_subscription_id, label: "Chargify Subscription Id"
       input :owner_id, label: "Owner Id"
     end
     f.actions
+  end
+
+  member_action :update, :method => :put do
+    subscription = Subscription.find(params[:id])
+    subscription.update(permitted_params[:subscription])
+    redirect_to admin_subscriptions_path, notice: "subscription updated"
   end
 
   member_action :refresh, :method => :post do

@@ -1,68 +1,93 @@
-<script lang="coffee">
-import Records  from '@/shared/services/records'
-import EventBus from '@/shared/services/event_bus'
-import Flash   from '@/shared/services/flash'
-import { onError } from '@/shared/helpers/form'
-import { head, filter, map, sortBy, isEqual } from 'lodash'
+<script lang="js">
+import Records  from '@/shared/services/records';
+import EventBus from '@/shared/services/event_bus';
+import Flash   from '@/shared/services/flash';
+import { map } from 'lodash-es';
 
-export default
-  props:
+export default {
+  props: {
     stance: Object
+  },
 
-  data: ->
-    pollOptions: []
-    stanceChoices: []
+  data() {
+    return {
+      pollOptions: [],
+      stanceChoices: []
+    };
+  },
 
-  created: ->
-    @watchRecords
-      collections: ['poll_options']
-      query: (records) =>
-        if !isEqual map(@pollOptions, 'name'), map(@stance.poll().pollOptions(), 'name')
-          @pollOptions = @poll.pollOptions()
-          @stanceChoices = map @pollOptions, (option) =>
-              poll_option_id: option.id
-              score: @stanceChoiceFor(option).score
-              name: option.name
-  methods:
-    submit: ->
-      @stance.stanceChoicesAttributes = map @stanceChoices, (choice) =>
-        poll_option_id: choice.poll_option_id
-        score: choice.score
-      actionName = if !@stance.castAt then 'created' else 'updated'
-      @stance.save()
-      .then =>
-        @stance.poll().clearStaleStances()
-        Flash.success "poll_#{@stance.poll().pollType}_vote_form.stance_#{actionName}"
-        EventBus.$emit "closeModal"
-      .catch onError(@stance)
+  created() {
+    this.watchRecords({
+      collections: ['pollOptions'],
+      query: records => {
+        if (this.stance.poll().optionsDiffer(this.pollOptions)) {
+          this.pollOptions = this.poll.pollOptionsForVoting();
+          this.stanceChoices = map(this.pollOptions, option => {
+            return {
+              score: this.stance.scoreFor(option),
+              option
+            };
+          });
+        }
+      }
+    });
+  },
+  methods: {
+    submit() {
+      this.stance.stanceChoicesAttributes = map(this.stanceChoices, choice => {
+        return {
+          poll_option_id: choice.option.id,
+          score: choice.score
+        };
+      });
+      const actionName = !this.stance.castAt ? 'created' : 'updated';
+      this.stance.save().then(() => {
+        Flash.success(`poll_${this.stance.poll().pollType}_vote_form.stance_${actionName}`);
+        EventBus.$emit("closeModal");
+      }).catch(() => true);
+    }
+  },
 
-    stanceChoiceFor: (option) ->
-      head(filter(@stance.stanceChoices(), (choice) =>
-        choice.pollOptionId == option.id
-        ).concat({score: 0}))
-
-    optionFor: (choice) ->
-      Records.pollOptions.find(choice.poll_option_id)
-
-  computed:
-    poll: -> @stance.poll()
-
-    orderedStanceChoices: -> sortBy @stanceChoices, 'name'
+  computed: {
+    poll() { return this.stance.poll(); }
+  }
+};
 </script>
 
 <template lang='pug'>
 form.poll-score-vote-form(@submit.prevent='submit()')
   .poll-score-vote-form__options
-    .poll-score-vote-form__option(v-for='choice in orderedStanceChoices', :key='choice.poll_option_id')
-      v-subheader.poll-score-vote-form__option-label {{ optionFor(choice).name }}
-      v-slider.poll-score-vote-form__score-slider(v-model='choice.score' :color="optionFor(choice).color" :thumb-color="optionFor(choice).color" :track-color="optionFor(choice).color" :height="4" :thumb-size="24" :thumb-label="(choice.score > 0) ? 'always' : true" :min="poll.customFields.min_score" :max="poll.customFields.max_score")
-        //- template(v-slot:append)
-        //-   v-text-field.poll-score-vote-form__score-input(v-model='choice.score' class="mt-0 pt-0" hide-details single-line type="number" style="width: 60px")
+    v-list-item.poll-dot-vote-vote-form__option(v-for='choice in stanceChoices', :key='choice.option.id')
+      v-list-item-content
+        v-list-item-title {{ choice.option.name }}
+        v-list-item-subtitle(style="white-space: inherit") {{ choice.option.meaning }}
+        v-slider.poll-score-vote-form__score-slider.mt-4(
+          :disabled="!poll.isVotable()"
+          v-model='choice.score'
+          :color="choice.option.color"
+          :height="4"
+          :min="poll.minScore"
+          :max="poll.maxScore"
+        )
+      v-list-item-action(style="max-width: 128px")
+        v-text-field.text-right(
+          type="number"
+          max-width="20px"
+          filled
+          rounded
+          dense
+          v-model="choice.score"
+        )
+
   validation-errors(:subject='stance', field='stanceChoices')
-  poll-common-add-option-button(:poll='stance.poll()')
-  poll-common-stance-reason(:stance='stance')
+  poll-common-stance-reason(:stance='stance', :poll='poll')
   v-card-actions.poll-common-form-actions
-    v-spacer
-    v-btn.poll-common-vote-form__submit(color="primary" type='submit' :loading="stance.processing")
-      span(v-t="'poll_common.vote'")
+    v-btn.poll-common-vote-form__submit(
+      block
+      :disabled="!poll.isVotable()"
+      :loading="stance.processing"
+      color="primary"
+      type='submit'
+    )
+      span(v-t="'poll_common.submit_vote'")
 </template>

@@ -1,10 +1,15 @@
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 // GK: a couple of these are dependent on the poll page which we haven't done yet
 
 module.exports = {
-  // group invitation form
+  'a_warmup': (test) => {
+    // give the server time to warm up for the tests
+    page = pageHelper(test)
+    page.loadPath('setup_group')
+    page.pause(10000)
+  },
+
   'invite_to_group': (test) => {
     page = pageHelper(test)
     page.loadPath('setup_group')
@@ -13,7 +18,7 @@ module.exports = {
     page.fillIn('.recipients-autocomplete input', 'test@example.com')
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')
-    page.expectElement('.headline')
+    page.expectElement('.text-h5')
     page.click('.announcement-form__submit')
     page.expectFlash('1 notifications sent')
   },
@@ -24,6 +29,7 @@ module.exports = {
 
     page.loadPath('setup_group')
     page.click('.discussions-panel__new-thread-button')
+    page.click('.thread-templates--template')
     page.fillIn('.recipients-autocomplete input', 'test@example.com')
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')
@@ -49,7 +55,7 @@ module.exports = {
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')
     page.escape()
-    page.expectElement('.headline')
+    page.expectElement('.text-h5')
     page.click('.strand-members-list__submit')
     page.expectText('.strand-members-list', 'test@example.com')
     page.expectFlash('1 notifications sent')
@@ -60,20 +66,22 @@ module.exports = {
     page = pageHelper(test)
 
     page.loadPath('setup_discussion')
-    page.click('.activity-panel__add-proposal')
+    page.click('.activity-panel__add-poll')
+    page.click('.decision-tools-card__poll-type--proposal')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.click('.poll-common-settings__specified-voters-only')
     page.click('.poll-common-form__submit')
     page.expectFlash('Proposal started')
     page.pause(500)
 
-    page.expectElement('.poll-members-list')
+    page.expectElement('.poll-members-form')
     page.fillIn('.recipients-autocomplete input', 'test@example.com')
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')
     page.escape()
-    page.expectElement('.headline')
-    page.click('.poll-members-list__submit')
+    page.expectElement('.text-h5')
+    page.click('.poll-members-form__submit')
     page.expectFlash('1 notifications sent')
   },
 

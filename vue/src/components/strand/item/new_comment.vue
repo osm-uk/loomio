@@ -1,57 +1,53 @@
-<script lang="coffee">
-import AbilityService from '@/shared/services/ability_service'
+<script lang="js">
+import AbilityService from '@/shared/services/ability_service';
 
-import { pick, assign, compact } from 'lodash'
-import CommentService from '@/shared/services/comment_service'
-import EventService from '@/shared/services/event_service'
-import Session from '@/shared/services/session'
+import { pick, pickBy, assign } from 'lodash-es';
+import CommentService from '@/shared/services/comment_service';
+import EventService from '@/shared/services/event_service';
+import Session from '@/shared/services/session';
 
-export default
-  props:
-    event: Object
-    isReturning: Boolean
+export default {
+  props: {
+    event: Object,
+    eventable: Object
+  },
 
-  computed:
-    commentActions: -> CommentService.actions(@eventable, @)
-    eventActions: -> EventService.actions(@event, @)
-    eventable: -> @event.model()
-    dockActions: ->
-      if AbilityService.canEditOwnComment(@eventable)
-        edit_comment = 'edit_comment'
-      else
-        reply_to_comment = 'reply_to_comment'
-        show_history = 'show_history'
+  data() {
+    return {
+      confirmOpts: null,
+      commentActions: CommentService.actions(this.eventable, this, this.event),
+      eventActions: EventService.actions(this.event, this)
+    };
+  },
 
-      assign(
-        pick @commentActions, compact ['react', reply_to_comment, 'translate_comment', edit_comment, show_history]
+  computed: {
+    dockActions() {
+      return assign(
+        pickBy(this.commentActions, v => v.dock)
       ,
-        pick @eventActions, []
-      )
+        pick(this.eventActions, [])
+      );
+    },
 
-    menuActions: ->
-      if AbilityService.canEditOwnComment(@eventable)
-        show_history = 'show_history'
-        reply_to_comment = 'reply_to_comment'
-
-      assign(
-        pick @eventActions, ['pin_event', 'unpin_event', 'move_event', 'copy_url']
+    menuActions() {
+      const actions = assign(
+        pick(this.eventActions, ['pin_event', 'unpin_event', 'move_event', 'copy_url'])
       ,
-        pick @commentActions, compact [reply_to_comment, show_history, 'admin_edit_comment', 'notification_history', 'discard_comment', 'undiscard_comment']
-      )
-
-  data: ->
-    confirmOpts: null
-    showReplyForm: false
-    newComment: null
+        pickBy(this.commentActions, v => v.menu)
+      );
+      return pick(actions, ['pin_event', 'unpin_event', 'reply_to_comment',  'admin_edit_comment', 'copy_url', 'notification_history', 'move_event', 'discard_comment', 'undiscard_comment']);
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
-section.strand-item__new-comment.new-comment(id="'comment-'+ eventable.id" :event="event" :is-returning="isReturning")
+section.strand-item__new-comment.new-comment(:id="'comment-'+ eventable.id")
   strand-item-headline(:event="event" :eventable="eventable")
   formatted-text.thread-item__body.new-comment__body(:model="eventable" column="body")
-  document-list(:model='eventable' skip-fetch)
+  link-previews(:model="eventable")
+  document-list(:model='eventable')
   attachment-list(:attachments="eventable.attachments")
-  action-dock(:model='eventable' :actions='dockActions' :menu-actions='menuActions')
-  comment-form(v-if="showReplyForm" :comment="newComment" avatar-size="36" @comment-submitted="showReplyForm = false" @cancel-reply="showReplyForm = false" autofocus)
+  action-dock(:model='eventable' :actions='dockActions' :menu-actions='menuActions' small left)
 </template>

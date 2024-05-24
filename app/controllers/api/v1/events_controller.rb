@@ -5,6 +5,14 @@ class API::V1::EventsController < API::V1::RestfulController
     render json: keys, root: 'position_keys'
   end
 
+  def timeline
+    load_and_authorize(:discussion)
+    data = Event.where(discussion_id: params[:discussion_id])
+                .order(:position_key)
+                .pluck(:position_key, :sequence_id, :created_at, :user_id, :depth, :descendant_count)
+    render json: data.to_json, root: 'timeline'
+  end
+
   def remove_from_thread
     service.remove_from_thread(event: load_resource, actor: current_user)
     respond_with_resource
@@ -41,18 +49,6 @@ class API::V1::EventsController < API::V1::RestfulController
   end
 
   def from
-    # if params[:from_unread]
-    #   reader = DiscussionReader.for(user: current_user, discussion: @discussion)
-    #   if reader.unread_items_count == 0
-    #     id = @discussion.last_sequence_id - per + 2
-    #     if id > 0
-    #       id
-    #     else
-    #       @discussion.first_sequence_id
-    #     end
-    #   else
-    #     reader.first_unread_sequence_id
-    #   end
     if params[:from_sequence_id_of_position]
       position = [params[:from_sequence_id_of_position].to_i, 1].max
       Event.find_by!(discussion: @discussion, depth: 1, position: position)&.sequence_id

@@ -1,79 +1,89 @@
-<script lang="coffee">
-import colors from 'vuetify/lib/util/colors'
-import {map, compact, pick} from 'lodash'
-import { findActiveMarkAttribute } from '@/shared/tiptap_extentions/utils/mark'
-
-ourColors = pick(colors, "red pink purple deepPurple indigo blue lightBlue cyan teal green lightGreen lime yellow amber orange deepOrange brown grey".split(" "))
+<script lang="js">
+import colors from 'vuetify/lib/util/colors';
+import { pick } from 'lodash-es';
 
 export default
-  props:
-    commands: Object
+{
+  props: {
     editor: Object
+  },
 
-  data: ->
-    back: null
-    fore: null
-    closable: false
-    foreColors: ['#191919', '#ffffff'].concat(compact(map(ourColors, (value, key) => value.base)))
-    backColors: ['#000000', '#ffffff'].concat(compact(map(ourColors, (value, key) => value.lighten3)))
+  data() {
+    return {colors: pick(colors, "red pink purple blue green yellow orange brown grey".split(" "))};
+  },
 
-  methods:
-    onSelectFore: (color) ->
-      @closable = true
-      @fore = color
-      @commands.foreColor({foreColor: color})
+  computed: {
+    activeColorKey() {
+      if (!this.editor.isActive('highlight')) { return null; }
+      return Object.keys(this.colors).find(name => this.editor.isActive('highlight', {color: name}));
+    },
 
-    onSelectBack: (color) ->
-      @closable = true
-      @back = color
-      @commands.backColor({backColor: color})
-
-  computed:
-    activeBack: ->
-      findActiveMarkAttribute(@editor.state, 'backColor')
-
-    activeFore: ->
-      findActiveMarkAttribute(@editor.state, 'foreColor')
-
+    buttonBgColor() {
+      return (this.colors[this.activeColorKey] || {lighten1: null}).lighten2;
+    },
+    buttonFgColor() {
+      if (this.buttonBgColor) {
+        return '#000';
+      } else {
+        return undefined;
+      }
+    }
+  }
+};
 </script>
 
 <template lang="pug">
 v-menu
   template(v-slot:activator="{ on, attrs }")
-    div.rounded-lg.color-picker-btn(:style="{'background-color': activeBack}")
-      v-btn.drop-down-button(icon v-on="on" v-bind="attrs" :title="$t('formatting.colors')")
-        v-icon(:color="activeFore") mdi-palette
-        v-icon(:color="activeFore").menu-down-arrow mdi-menu-down
-  v-card.color-picker
-    .caption(v-t="'formatting.text_color'")
-    .swatch(v-for="color in foreColors" :class="{'swatch--white': color == '#ffffff', 'swatch--selected': color == activeFore }" :style="{'background-color': color}" @click="onSelectFore(color)") &nbsp;
-    .caption(v-t="'formatting.background_color'")
-    .swatch(v-for="color in backColors" :class="{'swatch--white': color == '#ffffff', 'swatch--selected': color == activeBack }" :style="{'background-color': color}" @click="onSelectBack(color)") &nbsp;
-    .text-center
-      v-btn(x-small outlined @click="commands.formatClear" v-t="'formatting.reset'")
+    div.rounded-lg.color-picker-btn
+      v-btn.drop-down-button(
+        small icon
+        :style="{'background-color': buttonBgColor, color: buttonFgColor}" 
+        v-on="on"
+        v-bind="attrs"
+        :title="$t('formatting.colors')"
+      )
+        common-icon(small name="mdi-palette")
+  v-card.color-picker.pa-2
+    .swatch.swatch-color(v-for="(value, key) in colors"
+                         :class="{'swatch--selected': key == activeColorKey }"
+                         :style="{'background-color': value.lighten1}"
+                         @click="editor.chain().setHighlight({color: key}).focus().run()") &nbsp;
+    v-btn.mt-2(block x-small outlined @click="editor.chain().unsetHighlight().focus().run()" v-t="'formatting.reset'")
 </template>
 
 <style lang="sass">
 
+.color-picker-btn
+  padding-left: 1px
+
 .color-picker
-  width: 240px
+  width: 250px
 
 .swatch
+  box-sizing: border-box
   display: inline-block
   width: 24px
   height: 24px
-  border-radius: 24px
-  border: 1px solid white
+  margin: 1px
+  border: 1px solid transparent
+  border-radius: 2px
+  transition: border-radius 0.1s linear
+
+.swatch--color
+  // border-radius: 24px
+  border: 2px solid transparent
 
 .swatch--white
-  border: 1px solid #ddd
+  border: 2px solid #ddd
 
 .swatch--selected
-  border: 1px dotted #000
+  border-radius: 24px
 
 .swatch:hover
-  border: 1px solid grey
+  cursor: pointer
+  border-radius: 8px
 
 .swatch-active
-  border: 1px solid black
+  border-radius: 24px
 </style>

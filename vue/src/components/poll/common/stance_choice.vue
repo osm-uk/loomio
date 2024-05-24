@@ -1,65 +1,68 @@
-<script lang="coffee">
-import { fieldFromTemplate } from '@/shared/helpers/poll'
-import AppConfig from '@/shared/services/app_config'
-import { optionColors, optionImages } from '@/shared/helpers/poll'
+<script lang="js">
+import AppConfig from '@/shared/services/app_config';
 
 export default
-  props:
-    poll:
-      type: Object
+{
+  props: {
+    poll: {
+      type: Object,
       required: true
-    stanceChoice: Object
-    size:
-      type: Number
+    },
+    stanceChoice: {
+      type: Object,
+      required: true
+    },
+    size: {
+      type: Number,
       default: 24
-    hideScore:
-      type: Boolean
-      default: false
+    }
+  },
 
-  data: ->
-    optionColors: optionColors()
-    optionImages: optionImages()
+  computed: {
+    color() {
+      return this.pollOption.color;
+    },
 
-  computed:
-    color: ->
-      @pollOption.color
+    pollOption() {
+      return this.stanceChoice.pollOption;
+    },
 
-    pollOption: ->
-      @stanceChoice.pollOption()
+    pollType() {
+      return this.poll.pollType;
+    },
 
-    pollType: ->
-      @poll.pollType
+    optionName() {
+      if (AppConfig.pollTypes[this.poll.pollType].poll_option_name_format === 'i18n') {
+        return this.$t('poll_' + this.pollType + '_options.' + this.stanceChoice.pollOption.name);
+      } else {
+        return this.stanceChoice.pollOption.name;
+      }
+    }
+  },
 
-    optionName: ->
-      if @poll.translateOptionName()
-        @$t('poll_' + @pollType + '_options.' + @stanceChoice.pollOption().name)
-      else
-        @stanceChoice.pollOption().name
+  methods: {
+    emitClick() { this.$emit('click'); },
 
-
-  methods:
-    emitClick: -> @$emit('click')
-
-    colorFor: (score) ->
-      switch score
-        when 2 then AppConfig.pollColors.proposal[0]
-        when 1 then AppConfig.pollColors.proposal[1]
-        when 0 then AppConfig.pollColors.proposal[2]
+    colorFor(score) {
+      switch (score) {
+        case 2: return AppConfig.pollColors.proposal[0];
+        case 1: return AppConfig.pollColors.proposal[1];
+        case 0: return AppConfig.pollColors.proposal[2];
+      }
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
-.poll-common-stance-choice.mr-1.mb-1(:class="'poll-common-stance-choice--' + pollType" row)
-  span(v-if="!poll.datesAsOptions()")
-    v-avatar(tile :size="size" v-if='poll.hasOptionIcons()')
-      img(:src="'/img/' + optionImages[pollOption.name] + '.svg'", :alt='optionName')
-    span.body-2(v-if='!poll.hasOptionIcons()')
-      span {{ optionName }}
-      mid-dot(v-if="poll.pollType == 'poll' && poll.multipleChoice")
-      span(v-if="!hideScore && poll.hasVariableScore()")
-        mid-dot
-        span {{stanceChoice.rankOrScore}}
-  span(v-if="poll.datesAsOptions()")
-    v-chip(outlined :color="colorFor(stanceChoice.score)" @click="emitClick")
-      poll-meeting-time(:name="optionName")
+span.poll-common-stance-choice.text-truncate(:class="'poll-common-stance-choice--' + pollType" row)
+  v-avatar(tile :size="size" v-if='poll.config().has_option_icon')
+    img(:src="'/img/' + pollOption.icon + '.svg'", :alt='optionName')
+  v-chip(v-if='poll.pollOptionNameFormat == "iso8601"'
+    outlined :color="colorFor(stanceChoice.score)" @click="emitClick")
+    poll-meeting-time(:name="optionName")
+  span(v-if='!poll.config().has_option_icon && poll.pollOptionNameFormat != "iso8601"')
+    common-icon.mr-2(small :color="pollOption.color" name="mdi-check-circle")
+    span {{ optionName }}
 </template>

@@ -15,24 +15,16 @@ module CurrentUserHelper
   end
 
   def deny_spam_users
-    if ENV['SPAM_REGEX'] && Regexp.new(ENV['SPAM_REGEX']).match?(current_user.email)
+    if NoSpam::SPAM_REGEX.match?(current_user.email)
       raise SpamUserDeniedError.new(current_user.email)
     end
   end
 
-  private
-
-  def associate_user_to_visit
-    return unless current_visit
-
-    if current_user.is_logged_in? and current_visit.user_id.nil?
-      current_visit.update(user_id: current_user.id)
-    end
-
-    if params[:gclid] and current_visit.gclid.nil?
-      current_visit.update(gclid: params[:gclid])
-    end
+  def require_current_user
+    respond_with_error(status: 401) unless current_user && current_user.is_logged_in?
   end
+
+  private
 
   def restricted_user
     User.find_by!(params.slice(:unsubscribe_token).permit!).tap { |user| user.restricted = true } if params[:unsubscribe_token]

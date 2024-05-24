@@ -1,77 +1,77 @@
-<script lang="coffee">
-import Session        from '@/shared/services/session'
-import AbilityService from '@/shared/services/ability_service'
-import openModal from '@/shared/helpers/open_modal'
+<script lang="js">
+import Session        from '@/shared/services/session';
+import StanceService        from '@/shared/services/stance_service';
+import AbilityService from '@/shared/services/ability_service';
+import openModal from '@/shared/helpers/open_modal';
+import LmoUrlService  from '@/shared/services/lmo_url_service';
 
-export default
-  components:
-    ThreadItem: -> import('@/components/thread/item.vue')
-
-  props:
-    event: Object
-    isReturning: Boolean
+export default {
+  props: {
+    event: Object,
+    eventable: Object,
     collapsed: Boolean
+  },
 
-  computed:
-    eventable: -> @event.model()
-    poll: -> @eventable.poll()
-    showResults: -> @eventable.poll().showResults()
-
-    componentType:  ->
-      if @event.actor()
-        'router-link'
-      else
-        'div'
-
-  created: ->
-    @actions =
-      edit_stance:
-        name: 'poll_common.change_vote'
-        icon: 'mdi-pencil'
-        canPerform: =>
-          (Session.user() && @eventable.participant()) &&
-          @eventable.latest && @eventable.poll().isActive() && @eventable.participant() == Session.user()
-        perform: =>
-          openModal
-            component: 'PollCommonEditVoteModal',
-            props:
-              stance: @eventable.clone()
-
-      translate_stance:
-        icon: 'mdi-translate'
-        name: 'common.action.translate'
-        canPerform: =>
-          (@eventable.author() && Session.user()) &&
-          @eventable.author().locale != Session.user().locale &&
-          @eventable.reason && AbilityService.canTranslate(@eventable)
-        perform: =>
-          @eventable.translate(Session.user().locale)
-
-      show_history:
-        name: 'action_dock.edited'
-        icon: 'mdi-history'
-        canPerform: => @eventable.edited()
-        perform: =>
-          openModal
-            component: 'RevisionHistoryModal'
-            props:
-              model: @eventable
+  computed: {
+    actor() { return this.event.actor(); },
+    actorName() { return this.event.actorName(); },
+    poll() { return this.eventable.poll(); },
+    actions() { return StanceService.actions(this.eventable, this, this.event); },
+    componentType() {
+      if (this.actor) {
+        return 'router-link';
+      } else {
+        return 'div';
+      }
+    },
+    link() {
+      return LmoUrlService.event(this.event);
+    }
+  }
+};
 </script>
 
 <template lang="pug">
 
-section.strand-item__stance-created.stance-created(id="'comment-'+ eventable.id" :event="event" :is-returning="isReturning")
-  template(v-if="eventable.singleChoice()")
+section.strand-item__stance-created.stance-created(id="'comment-'+ eventable.id", :event="event")
+  template(v-if="eventable.castAt && !eventable.revokedAt")
+    template(v-if="eventable.hasOptionIcon()")
+      .d-flex.text-body-2
+        component.text--secondary(:is="componentType", :to="actor && urlFor(actor)") {{actorName}}
+        space
+        space
+        poll-common-stance-choice(v-if="poll.showResults()", :poll="poll", :stance-choice="eventable.stanceChoice()")
+        space
+        router-link.text--secondary(:to='link')
+          space
+          time-ago(:date='eventable.updatedAt || eventable.castAt')
+        template(v-if="!eventable.latest")
+          mid-dot.text--secondary
+          span.text--secondary(v-t="'poll_common.outdated'")
+    .poll-common-stance(v-if="poll.showResults() && !collapsed")
+      v-layout(v-if="!eventable.hasOptionIcon()" wrap align-center)
+        strand-item-headline.text--secondary(:event="event" :eventable="eventable" :dateTime="eventable.updatedAt || eventable.castAt")
+      poll-common-stance-choices(:stance="eventable")
+      formatted-text.poll-common-stance-created__reason(:model="eventable", column="reason")
+      link-previews(:model="eventable")
+      attachment-list(:attachments="eventable.attachments")
+    action-dock(:model='eventable', :actions='actions' small left)
+  template(v-if="!eventable.castAt && !eventable.revokedAt")
     .d-flex
-      component(:is="componentType" :to="event.actor() && urlFor(event.actor())") {{event.actorName()}}
-      space
-      poll-common-stance-choice(v-if="showResults" :poll="poll" :stance-choice="eventable.stanceChoice()")
-  .poll-common-stance(v-if="showResults && !collapsed")
-    v-layout(v-if="!eventable.singleChoice()" wrap align-center)
-      strand-item-headline(:event="event" :eventable="eventable")
-      poll-common-stance-choice(:poll="poll" :stance-choice='choice' v-if='choice.show()' v-for='choice in eventable.orderedStanceChoices()' :key='choice.id')
-    span.caption(v-if='eventable.castAt && eventable.totalScore() == 0' v-t="'poll_common_votes_panel.none_of_the_above'" )
-    formatted-text.poll-common-stance-created__reason(:model="eventable" column="reason")
-  attachment-list(:attachments="eventable.attachments")
-  action-dock(:model='eventable' :actions='actions')
+      component.text--secondary(:is="componentType", :to="actor && urlFor(actor)") {{actorName}}
+      mid-dot.text--secondary
+      span(v-t="'poll_common_votes_panel.undecided'")
+      mid-dot.text--secondary
+      router-link.text--secondary(:to='link')
+        time-ago(:date='eventable.updatedAt')
+    action-dock(:model='eventable', :actions='actions' small)
+  template(v-if="eventable.revokedAt")
+    .d-flex
+      component.text--secondary(:is="componentType", :to="actor && urlFor(actor)") {{actorName}}
+      mid-dot.text--secondary
+      span.text--secondary(v-t="'poll_common_votes_panel.vote_removed'")
+      mid-dot.text--secondary
+      router-link.text--secondary(:to='link')
+        time-ago(:date='eventable.updatedAt')
+    action-dock(:model='eventable', :actions='actions' small)
 </template>

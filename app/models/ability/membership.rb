@@ -2,6 +2,10 @@ module Ability::Membership
   def initialize(user)
     super(user)
 
+    can :show, ::Membership do |membership|
+      membership.user_id == user.id || membership.group.admins.exists?(user.id) || membership.inviter_id == user.id
+    end
+
     can [:update], ::Membership do |membership|
       membership.user_id == user.id || membership.group.admins.exists?(user.id)
     end
@@ -13,13 +17,15 @@ module Ability::Membership
     end
 
     can :resend, ::Membership do |membership|
-      !membership.accepted_at? && user == membership.inviter
+      !membership.accepted_at? && user_is_admin_of?(membership.group_id)
     end
 
-    can [:remove_admin, :destroy], ::Membership do |membership|
-      (membership.user == user ||
-       user_is_admin_of?(membership.group_id) ||
-       (membership.inviter == user && !membership.accepted_at?))
+    can [:remove_admin, :revoke, :destroy], ::Membership do |membership|
+      user.is_admin || (
+        (membership.user == user ||
+        user_is_admin_of?(membership.group_id) ||
+        (membership.inviter == user && !membership.accepted_at?))
+      )
     end
   end
 end

@@ -6,52 +6,12 @@ describe Group do
   let(:discussion) { create :discussion, group: group }
   let(:discarded_discussion) { create :discussion, group: group, discarded_at: Time.now }
 
-  context 'default cover photo' do
-
-    it 'returns an uploaded cover url if one exists' do
-      cover_photo_stub = OpenStruct.new(url: 'test.jpg')
-      group = create :group, default_group_cover: create(:default_group_cover)
-      group.stub(:cover_photo).and_return(cover_photo_stub)
-      expect(cover_photo_stub.url).to match group.cover_photo.url
-    end
-
-    it 'returns the default cover photo for the group if it is a parent group' do
-      group = create :group, default_group_cover: create(:default_group_cover)
-      expect(group.default_group_cover.cover_photo.url).to match group.cover_photo.url
-    end
-
-    it 'returns the parents default cover photo if it is a subgroup' do
-      parent = create :group, default_group_cover: create(:default_group_cover)
-      group = create :group, parent: parent
-      expect(parent.default_group_cover.cover_photo.url).to match group.cover_photo.url
-    end
-  end
-
   context "memberships" do
     it "deletes memberships assoicated with it" do
       group = create :group
       membership = group.add_member! create :user
       group.destroy
       expect { membership.reload }.to raise_error ActiveRecord::RecordNotFound
-    end
-  end
-
-  context 'logo_or_parent_logo' do
-    it 'returns the group logo if it is a parent' do
-      group = create :group
-      expect(group.logo_or_parent_logo).to eq group.logo
-    end
-
-    it 'returns the parents logo if one does not exist' do
-      parent = create :group, logo: fixture_for('images/strongbad.png')
-      group = create :group, parent: parent
-      expect(group.logo_or_parent_logo).to eq parent.logo
-    end
-
-    it 'returns the group logo if one exists' do
-      parent = create :group
-      group = create :group, parent: parent, logo: fixture_for('images/strongbad.png')
-      expect(group.logo_or_parent_logo).to eq group.logo
     end
   end
 
@@ -150,10 +110,6 @@ describe Group do
       it 'sets archived_at on the group' do
         group.archived_at.should be_present
       end
-
-      it 'archives the memberships of the group' do
-        group.memberships.reload.all?{|m| m.reload.archived_at.should be_present}
-      end
     end
 
     describe '#unarchive!' do
@@ -162,11 +118,7 @@ describe Group do
       end
 
       it 'restores archived_at to nil on the group' do
-        group.archived_at.should be_nil
-      end
-
-      it 'restores the memberships of the group' do
-        group.memberships.all?{|m| m.archived_at.should be_nil}
+        group.reload.archived_at.should be_nil
       end
     end
   end
@@ -196,19 +148,6 @@ describe Group do
     it 'returns total number of memberships in the org' do
       expect(group.memberships.count + subgroup.memberships.count).to eq 3
       expect(group.org_memberships_count).to eq 2
-    end
-  end
-
-  describe "has_max_members" do
-    let!(:group) { create(:group) }
-    it 'is true when subscription max members is eq to org_memberships_count' do
-      Subscription.for(group).update(max_members: group.org_memberships_count)
-      expect(group.has_max_members).to eq true
-    end
-
-    it 'is false when org_memberships_count is less that max_members' do
-      Subscription.for(group).update(max_members: group.org_memberships_count + 1)
-      expect(group.has_max_members).to eq false
     end
   end
 end

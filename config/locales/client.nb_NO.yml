@@ -1,41 +1,8 @@
 nb_NO:
   loomio_tags:
     name_label: Navn
-  reactions:
-    slight_smile: Liker
-    heart: Elsker
-    laughing: Ler
-    clap: Klappe
-    hugging: Klem
-    sunglasses: Kul
-    wink: Vinke
-    nerd: Smart
-    relieved: Beroliget
-    worried: Bekymret
-    confused: Forvirret
-    confounded: Forvirret
-    neutral_face: Nøytral
-    slight_frown: Rynker på nesa
-    disappointed: Skuffet
-    angry: Sinna
-    weary: Sliten
-    astonished: Forbauset
-    rolling_eyes: Ruller med øynene
-    cry: Gråter
-    scream: Skriker
-    sleeping: Kjeder seg
-    thinking: Tenker
-    raised_hands: Henda i været
-    pray: Ber
-    fingers_crossed: Kryssede fingere
-    v: Fred
-    metal: Metal
-    ok_hand: Ok
-    wave: Vinke
-    thumbsup: Tommel opp
-    thumbsdown: Tommel ned
   timezones:
-    local: Lokal tid ({{value}})
+    local: Lokal tid (%{value})
   common:
     you: Du
     expand: Utvid
@@ -49,8 +16,8 @@ nb_NO:
     time:
       am: AM
       pm: PM
-    closing_in: 'Stenger {{time}}'
-    closed_ago: 'Stengt {{time}}'
+    closing_in: 'Stenger %{time}'
+    closed_ago: 'Stengt %{time}'
     volume: 'Volum'
     notification_volume: 'Varslingsvolum'
     group: 'Gruppe'
@@ -75,12 +42,10 @@ nb_NO:
       thismonth: 'Denne måneden'
       older: 'Eldre'
     more_help: 'Mer hjelp'
-    models:
-      proposal: 'Forslag'
     copy: 'Kopier'
     copy_text: 'Kopier tekst'
     copied: 'Kopiert til utklippstavle'
-    points_abbrev: Hver stemme er verdt {{score}} poeng
+    points_abbrev: Hver stemme er verdt %{score} poeng
     total: Totalt
     action:
       search: 'Søk'
@@ -99,7 +64,6 @@ nb_NO:
       update: 'Oppdater'
       cancel: 'Avbryt'
       show_more: "Vis mer"
-      count_more: "{{count}} flere"
       view_all: "Vis alle"
       new_thread: "Ny tråd"
       loading: 'Laster'
@@ -110,6 +74,7 @@ nb_NO:
       share: Del
       ok: Ok
       retry: Prøv igjen
+      clear: Tøm
       done: Ferdig
       start: Start
       delete: Slett
@@ -155,8 +120,8 @@ nb_NO:
   verify_email_notice:
     please_verify: Takk for din deltakelse. Vær grei å sjekk e-posten din for å verifisere din stemme.
   previous_polls_page:
-    heading: Aktivitet i {{name}}
-    polls_count: Viser {{loaded}} av {{total}} beslutninger
+    heading: Aktivitet i %{name}
+    polls_count: Viser %{loaded} av %{total} beslutninger
     search_activities: Søk i beslutninger
   volume_levels:
     loud: 'Høyt'
@@ -210,17 +175,6 @@ nb_NO:
     aria_label: Lukk tråd
     close_thread: Lukk tråd
     image_alt: Lukker alle tråder
-  mute_explanation_modal:
-    aria_label: Demp tråd
-    mute_thread: Demp tråd
-    body_html: |
-        Demping betyr at du <strong> ikke vil motta varslinger om beslutninger </strong>, annen aktivitet i denne tråden, med mindre noen <strong> @nevner deg.</strong>.
-    body_html_2: |
-        Dempede tråder er skult fra <strong>SIste</strong> og <strong>Uleste </strong> sider også. For å finne dine dempede tråder så kan du velge <strong>Dempede</strong> i sidemenyen
-    image_alt: Alternativer for dempede tråder i sidemenyen.
-  dismiss_explanation_modal:
-    aria_label: Avslutt tråd
-    dismiss_thread: Avslutt tråd
   inbox:
     clear: 'Tøm'
     latest: 'Siste'
@@ -243,7 +197,7 @@ nb_NO:
       remove_attachment: 'Fjern vedlegg'
     messages:
       created: 'Kommentar lagt til'
-      replied: '{{name}} varslet om svar'
+      replied: '%{name} varslet om svar'
       updated: 'Kommentar oppdatert'
       destroyed: 'Kommentar slettet'
     say_something: Si noe...
@@ -252,17 +206,16 @@ nb_NO:
     cancel_reply: 'Avslutt svar'
     confirm_delete_message: 'Er du sikker på at du vil slette denne kommentaren?'
     confirm_delete: 'Slett kommentar'
-    in_reply_to: "Svar til {{name}}"
+    in_reply_to: "Svar til %{name}"
     write_a_comment: "Skriv en kommentar..."
     submit_button:
       label: 'Post'
-    private_privacy_notice: 'Kommentaren din vil være synlig for medlemmer av {{groupName}}.'
+    private_privacy_notice: 'Kommentaren din vil være synlig for medlemmer av %{groupName}.'
     public_privacy_notice: 'Kommentaren din vil være synlig for alle på nettet.'
     sign_in: "Logg inn for å bli med i samtalen"
   sidebar:
     threads: 'Tråder'
     recent_threads: 'Siste tråder'
-    unread_threads: 'Uleste tråder ({{count}})'
     muted_threads: 'Dempede tråder'
     explore: 'Offentlige grupper'
     start_thread: Ny tråd
@@ -294,12 +247,12 @@ nb_NO:
     button_label: 'Brukermeny'
     edit_profile: 'Rediger brukerprofil'
     help: 'Hjelp'
-    contact_site_name: 'Kontakt {{site_name}}'
+    contact_site_name: 'Kontakt %{site_name}'
     sign_out: 'Logg ut'
   membership_card:
     group_members: "Gruppemedlemmer"
     discussion_members: "Trådmedlemmer"
-    poll_members: "{{pollType}} medlemmer"
+    poll_members: "%{pollType} medlemmer"
     invite_to_group: "Inviter til gruppe"
     invite_to_discussion: "Inviter til tråd"
     invite_to_poll: "Inviter til å stemme"
@@ -311,44 +264,15 @@ nb_NO:
     remove_from:
       discussion: "Fjern fra tråd"
       group: "Fjern fra gruppe"
-      poll: 'Fjern fra  {{pollType}}'
+      poll: 'Fjern fra  %{pollType}'
     cancel_invitation: Avslutt invitasjon
   notification_models:
     discussion: 'tråd:'
     comment: 'kommenter i'
-    poll: 'beslutning:'
     outcome: 'resultat:'
   notifications:
     header: "Varslinger"
     no_notifications: "Du har ingen ny varslinger"
-    new_motion: "<strong>{{name}}</strong>  started en beslutning  <strong>{{title}}</strong>"
-    motion_closed: "Beslutning lukket:<strong>{{title}}</strong>"
-    publish_outcome: "Publiser et resultat"
-    motion_closed_by_user: "<strong>{{name}}</strong> stengte beslutningen <strong>{{title}}</strong>"
-    motion_closed_by_expiry: "Beslutningen er lukket <strong>{{title}}</strong>"
-    new_vote: "<strong>{{name}}</strong> {{position}} på beslutningen <strong>{{title}}</strong>"
-    new_comment: "<strong>{{name}}</strong> kommenterte på <strong>{{title}}</strong>"
-    comment_replied_to: "<strong>{{name}}</strong>svarte på din kommentar i <strong>{{title}}</strong>"
-    reaction_created: "<strong>{{name}}</strong> reagerte <img class='emojione' src='{{reaction_src}}' alt='{{reaction}}'/> på din {{model}}<strong>{{title}}</strong>"
-    user_mentioned: "<strong>{{name}}</strong> nevnte deg i <strong>{{title}}</strong>"
-    user_reminded: "<strong>{{name}}</strong> venter på at du skal delta i <strong>{{title}}</strong>"
-    membership_requested: "<strong>{{name}}</strong> forespurte medlemskap i  <strong>{{title}}</strong>"
-    membership_request_approved: '<strong>{{name}}</strong> godkjente din forespørsel om å bli med i  <strong>{{title}}</strong>'
-    user_added_to_group: "<strong>{{name}}</strong> la deg til i gruppen  <strong>{{title}}</strong>"
-    user_added_to_group_no_inviter: "Du ble lagt til i gruppen  <strong>{{title}}</strong>"
-    motion_closing_soon: "Beslutninger som snart stenger: <strong>{{title}}</strong>"
-    motion_outcome_created: "<strong>{{name}}</strong> publiserte resultatet fra beslutningen <strong>{{title}}</strong>"
-    motion_outcome_updated: "<strong>{{name}}</strong> oppdaterte resultatet for beslutningen <strong>{{title}}</strong>"
-    invitation_accepted: "<strong>{{name}}</strong> godkjente din invitasjon til å bli med i  <strong>{{title}}</strong>"
-    poll_created: "<strong>{{name}}</strong> startet en {{poll_type}}: <strong>{{title}}</strong>"
-    poll_edited: "<strong>{{name}}</strong> redigerte en {{poll_type}}: <strong>{{title}}</strong>"
-    poll_announced: "<strong>{{name}}</strong> delte en {{poll_type}}: <strong>{{title}}</strong>"
-    poll_closing_soon: "{{poll_type}} stenger snart: <strong>{{title}}</strong>"
-    poll_expired: "{{poll_type}} stengt: <strong>{{title}}</strong>"
-    poll_option_added: "<strong>{{name}}</strong>  la til valg for: <strong>{{title}}</strong>"
-    outcome_created: "<strong>{{name}}</strong> delte et resulat: <strong>{{title}}</strong>"
-    outcome_announced: "<strong>{{name}}</strong> delte et resulat: <strong>{{title}}</strong>"
-    stance_created: "<strong>{{name}}</strong> deltok i: <strong>{{title}}</strong>"
   discussion_form:
     invite: Inviter
     aria_label: 'Trådskjema'
@@ -363,15 +287,13 @@ nb_NO:
     title_label: 'Tittel'
     title_placeholder: 'Hvilket tema vil du diskutere?'
     context_label: 'Kontekst'
-    context_placeholder: 'Gi nok bakgrunnsinformasjon for at gruppen skal ha en produkutiv diskusjon. Denne kan oppdateres underveis i diskusjonen.'
     privacy_label: 'Personvern'
     privacy_public: 'Alle kan se denne tråden. Bare medlemmer kan delta i tråden.'
-    privacy_private: 'Denne tråden er bare synlig for medlemmer i {{group}}.'
-    privacy_organisation: 'Denne tråden vil være synlig for medlemmer i {{parent}} og medlemmer i gruppen: {{group}}.'
-    fork_notice: 'En ny tråd vil bli opprettet med {{count}} innlegg fra  {{title}}'
+    privacy_private: 'Denne tråden er bare synlig for medlemmer i %{group}.'
+    privacy_organisation: 'Denne tråden vil være synlig for medlemmer i %{parent} og medlemmer i gruppen: %{group}.'
   announcement:
     audiences:
-      group: Medlemmer av {{name}}
+      group: Medlemmer av %{name}
     form:
       group_announced:
         title: Inviter til gruppe
@@ -389,7 +311,6 @@ nb_NO:
       outcome_announced:
         title: Del resultat
       anyone_can_participate: Alle med link kan delta
-      group_title: '{{name}} ({{count}} folk)'
     members_list:
       title: Delt med
       last_notified: Varslet
@@ -398,8 +319,6 @@ nb_NO:
     group_form:
       search_placeholder: Søk etter folk...
       modal_title: Velg gruppemedlemmer
-    flash:
-      success: '{{count}} varslinger sendt'
   action_dock:
     add_resource: Legg til vedlegg
     edit_group: Rediger gruppens kontekst
@@ -430,13 +349,11 @@ nb_NO:
   formatting:
     attach: Legg ved fil
   cover_photo_form:
-    aria_label: 'Bytt forsidebilde skjema'
     heading: 'Nytt forsidebilde'
     upload_link: 'Last opp nytt forsidebilde'
     image_size_helptext: 'Den beste bildeoppløsningen er 1400×320px'
     upload_success: 'Forsidebilde oppdatert'
   logo_photo_form:
-    aria_label: 'Bytt gruppelogo skjema'
     heading: 'Ny gruppelogo'
     upload_link: 'Last opp ny gruppelogo'
     image_size_helptext: 'Den beste oppløsningen er 100×100px'
@@ -444,7 +361,7 @@ nb_NO:
   join_group_button:
     join_group: Bli med i gruppe
     messages:
-      joined_group: 'Du er nå medlem av gruppen: {{group}}'
+      joined_group: 'Du er nå medlem av gruppen: %{group}'
   membership_request_form:
     aria_label: Forespørslel om medlemskap
     heading: Spør om å få bli med i gruppen
@@ -453,26 +370,21 @@ nb_NO:
     introduction_label: Hvorfor vil du bli med i gruppen?
     submit_button: Spør om å få bli med i gruppen
     introduction_over_limit: Svaret er for langt
-    messages:
-      membership_requested: 'Du har forespurt medlemskap i gruppen: {{group}}'
   revision_history_modal:
     aria_label: Revisjonshistorikk
-    started_by: 'Startet av <strong>{{name}}</strong>'
-    edited_by: 'Redigert av <strong>{{name}}</strong>'
+    started_by: 'Startet av <strong>%{name}</strong>'
+    edited_by: 'Redigert av <strong>%{name}</strong>'
     posted: Postet
     original_text: Original
     current_revision: Siste
-    closing_at_changed: "stengetid satt til {{time}}"
-    private_changed: "personvern satt til {{private}}"
-    group_id_changed: "flyttet til {{name}}"
+    closing_at_changed: "stengetid satt til %{time}"
+    private_changed: "personvern satt til %{private}"
+    group_id_changed: "flyttet til %{name}"
   reactions_input:
     add_your_reaction: Legg til din reaksjon
   reactions_display:
-    more_reactions: "{{count}} flere"
     you: "Du"
-    you_and_name: "Du og {{name}}"
-    you_and_name_and_count_more: "Du, {{name}} og {{count}} flere"
-    name_and_count_more: "{{name}} og {{count}} flere"
+    you_and_name: "Du og %{name}"
   context_panel:
     thread_status:
       pinned: "Denne tråden er festet. Den vil forbli på toppen av gruppelista for alle brukere."
@@ -480,8 +392,6 @@ nb_NO:
   group_page:
     threads: Tråder
     settings: Innstillinger
-    show_opened: '{{count}} Åpne'
-    show_closed: '{{count}} Lukket'
     no_threads_here: Ingen tråder å se her!
     search_threads: Søk etter tråder...
     new_cover_photo: 'Last opp nytt forsidebilde'
@@ -511,6 +421,7 @@ nb_NO:
     update_settings: Lagre endringer
     edit: Rediger
   dashboard_page:
+    recent_threads: "Siste tråder"
     filtering:
       proposals: Forslag
     threads_from:
@@ -520,7 +431,7 @@ nb_NO:
     no_groups:
       start: Start
   discussion:
-    started_by: 'Startet av <strong>{{name}}</strong>'
+    started_by: 'Startet av <strong>%{name}</strong>'
   activity_card:
     latest: Siste
     context: Kontekst
@@ -538,16 +449,14 @@ nb_NO:
     pin_thread: Fest tråd
   delete_comment_dialog:
     title: 'Slett kommentar'
-    question: 'Er du sikker på at du vil slette denne kommentaren?'
-    confirm: 'Slett kommentar'
   decision_tools_card:
     proposal_title: Forslag
-    count_title: Ja / Nei
     poll_title: Avstemning
     meeting_title: Tidspunkt
     ranked_choice_title: Rangering
   poll_common:
     have_your_say: Si det du vil
+    share_outcome: Del resultat
     save_changes: Lagre
   discussions_panel:
     open: Åpen
@@ -559,18 +468,15 @@ nb_NO:
   polls_panel:
     open: 'Åpen'
     closed: 'Lukket'
-  current_polls_card:
-    start_poll: Ny beslutning
-  poll_common_select_group:
-    loomio_group: Gruppe
   poll_common_settings:
     anyone_can_participate:
       title: Alle med link kan delta
-  poll_common_set_outcome_panel:
-    share_outcome: Del resultat
   poll_common_outcome_form:
     submit: Del resultat
   poll_common_form:
+    voting_methods:
+      ranked_choice: Rangering
+      time_poll: Tidspunkt
     title: Tittel
     closed: Lukket
     start: Start
@@ -579,8 +485,8 @@ nb_NO:
     edit_header: Rediger avstemning
   poll_meeting_chart_panel:
     total: Totalt
-  poll_common_subscribe_form:
-    subscribe: Meld deg på
+  poll_remove_vote:
+    success: Stemme fjernet
   auth_form:
     name: Navn
     email: E-post

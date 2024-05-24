@@ -4,11 +4,10 @@ vi:
   loomio_tags:
     name_label: Tên
   common:
+    version: Phiên bản
     group: 'Nhóm'
     groups: 'Các nhóm'
     email_address: Địa chỉ email
-    models:
-      proposal: 'Lời đề nghị'
     action:
       search: 'Tìm kiếm'
       save: 'Lưu'
@@ -48,6 +47,8 @@ vi:
       invitation_message_label: Tin nhắn
       poll_reminder:
         message_label: Tin nhắn
+      wip_poll_reminder:
+        message_label: Tin nhắn
   join_group_button:
     membership_requested: Đã gửi yêu cầu làm thành viên
   membership_request_form:
@@ -85,16 +86,8 @@ vi:
     close_thread: 'Đóng lại'
   delete_comment_dialog:
     title: 'Xóa bình luận'
-    question: 'Bạn có chắc muốn xóa bình luận này?'
-    confirm: 'Xóa bình luận'
   contact_message_form:
     subject_label: "Chủ đề"
-  hint:
-    context: 'Gợi ý về cách sử dụng khung điều khiển nội dung'
-    discussion: 'Gợi ý về cách bắt đầu tham gia thảo luận'
-    invitation: 'Gợi ý về cách viết các lời mời để kết nối thêm thành viên'
-    proposal: 'Gợi ý về việc viết lời đề nghị theo hướng rõ ràng nhất'
-    vote: 'Bạn có thể thay đổi kiến nghị của bạn vào bất kỳ thời điểm nào'
   poll_common:
     have_your_say: Phát biểu ý kiến của bạn
     save_changes: Lưu
@@ -109,15 +102,16 @@ vi:
     closed: 'Đã đóng lại'
   poll_common_form:
     closed: Đã đóng lại
+  poll_proposal_options:
+    'yes': 'Đồng Ý'
+    'no': 'Không đồng ý'
   poll_count_options:
     'yes': 'Đồng Ý'
     'no': 'Không đồng ý'
+  chatbot:
+    password: Mật khẩu
   webhook:
     name_label: Tên
   group_survey:
     categories:
-      other: Khác
-    uses:
-      other: Khác
-    referrers:
       other: Khác

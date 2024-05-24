@@ -37,7 +37,9 @@ describe Discussion do
         discussion.private = false
         discussion.valid?
       end
-      it {should have(1).errors_on(:private)}
+      it "should have(1).errors_on(:private)" do
+        expect(discussion.errors.to_a).to include "Private must be private"
+      end
     end
   end
 
@@ -147,7 +149,7 @@ describe Discussion do
   end
 
   describe 'mentioning' do
-    let(:discussion) { build(:discussion, description: "Hello @#{user.username}!") }
+    let(:discussion) { build(:discussion, description: "Hello @#{user.username}!", description_format: 'md') }
     let(:another_user) { create(:user) }
 
     describe '#mentionable_text' do

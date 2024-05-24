@@ -1,34 +1,39 @@
-class ReceivedEmailsController < Griddler::EmailsController
-  # reply to discussion by email action
-  def reply
-    normalized_params.each do |p|
-      process_email Griddler::Email.new(p)
+class ReceivedEmailsController < ApplicationController
+  skip_before_action :verify_authenticity_token
+
+  def create
+    email = build_received_email_from_params
+
+    email.save!
+    
+    if email.is_addressed_to_loomio? && !email.is_auto_response?
+      ReceivedEmailService.route(email)
     end
 
     head :ok
   end
 
-  def create
-    if ReceivedEmail.new(received_email_params).save
-      head :ok
-    else
-      head :bad_request
-    end
-  end
-
   private
 
-  def received_email_params
-    {
-      sender_email: mailin_params.dig('from', 0, 'address'),
-      headers:      mailin_params['headers'],
-      subject:      mailin_params.dig('headers', 'subject'),
-      body:         mailin_params['html'] || mailin_params['text'],
-      locale:       mailin_params['language']
-    }
-  end
+  def build_received_email_from_params
+    data = JSON.parse(params[:mailinMsg])
 
-  def mailin_params
-    @mailin_params ||= JSON.parse(params.require(:mailinMsg))
+    email = ReceivedEmail.new(
+      headers: data['headers'],
+      body_text: data['text'],
+      body_html: data['html'],
+      dkim_valid: data['dkim'] == 'pass' ? true : false,
+      spf_valid: data['spf'] == 'pass' ? true : false,
+    )
+
+    email.attachments = data.fetch('attachments', []).map do |a|
+      {
+        io: StringIO.new(Base64.decode64(params[a['generatedFileName']])),
+        content_type: a['contentType'],
+        filename: a['generatedFileName']
+      }
+    end
+
+    email
   end
 end

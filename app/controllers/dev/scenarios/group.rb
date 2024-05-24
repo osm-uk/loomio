@@ -5,10 +5,58 @@ module Dev::Scenarios::Group
     create_group.add_member! emilio
     redirect_to group_url(create_group)
   end
+
   def setup_group
     sign_in patrick
     create_group.add_member! emilio
     redirect_to group_url(create_group)
+  end
+
+  def setup_group_with_received_email
+    sign_in patrick
+    create_group.add_member! emilio
+    5.times do
+      name = Faker::Name.name
+      email = ReceivedEmail.create(
+        body_html: "<html><body>hello everyone.</body></html>",
+        dkim_valid: true,
+        spf_valid: true,
+        headers: {
+          from: "\"#{name}\" <#{Faker::Internet.email(name: name)}>",
+          to: create_group.handle + "@#{ENV['REPLY_HOSTNAME']}",
+          subject: Faker::TvShows::TheFreshPrinceOfBelAir.quote
+        }
+      )
+    end
+    ReceivedEmailService.route_all
+    redirect_to group_emails_url(create_group)
+  end
+
+  def setup_group_with_max_members
+    sign_in patrick
+    create_group.subscription.update(max_members: 4)
+    redirect_to group_memberships_url(create_group)
+  end
+
+  def setup_trial_group_with_received_email
+    sign_in patrick
+    create_group.subscription.update(plan: 'trial')
+    create_group.add_member! emilio
+    5.times do
+      name = Faker::Name.name
+      email = ReceivedEmail.create(
+        body_html: "<html><body>hello everyone.</body></html>",
+        dkim_valid: true,
+        spf_valid: true,
+        headers: {
+          from: "\"#{name}\" <#{Faker::Internet.email(name: name)}>",
+          to: create_group.handle + "@#{ENV['REPLY_HOSTNAME']}",
+          subject: Faker::TvShows::TheFreshPrinceOfBelAir.quote
+        }
+      )
+    end
+    ReceivedEmailService.route_all
+    redirect_to group_emails_url(create_group)
   end
 
   def setup_user_no_group
@@ -26,7 +74,7 @@ module Dev::Scenarios::Group
   def setup_group_with_handle
     sign_in patrick
     group = create_group
-    group.update_attributes(name: 'Ghostbusters', handle: 'ghostbusters')
+    group.update(name: 'Ghostbusters', handle: 'ghostbusters')
     redirect_to group_url(group)
   end
 
@@ -115,40 +163,6 @@ module Dev::Scenarios::Group
     membership = Membership.find_by(user: patrick, group: @group)
     sign_in patrick
     redirect_to group_url(create_group)
-  end
-
-  def setup_saml_group
-    @group = Group.create!(name: 'Dirty Dancing Shoes', handle: 'dirty-dancing-shoes', group_privacy: params[:privacy] || 'secret')
-    @group.create_subscription(plan: 'pp-pro-annual')
-    provider_url = "https://saml_provider.example.com"
-    # provider_url = 'https://app.onelogin.com/saml/metadata/c5690a10-4e33-4a57-9389-30dd92996629'
-    patrick.update(email: params[:email]) if params[:email]
-
-    SamlProvider.create(group: @group, idp_metadata_url: provider_url)
-    @group.add_admin! jennifer
-
-    if params[:member]
-      membership = @group.add_admin! patrick
-      membership.update(saml_session_expires_at: if params[:expired] then 1.minute.ago else 1.day.from_now end)
-    end
-
-    sign_in patrick if params[:sign_in]
-
-    if params[:discussion]
-      @discussion = Discussion.new(title: "I carried a watermelon", author: jennifer, group: @group)
-      DiscussionService.create(discussion: @discussion, actor: jennifer)
-      redirect_to discussion_url(@discussion)
-    else
-      redirect_to group_url(create_group)
-    end
-  end
-
-  def setup_saml_secret_group_pending_invitation
-    @group = Group.create!(name: 'Secret Dirty Dancing Shoes', handle: 'secret-shoes', group_privacy: 'secret')
-    SamlProvider.create(group: @group, idp_metadata_url: "https://saml_provider.example.com")
-    @group.add_admin! jennifer
-    membership = FactoryBot.create :membership, group: @group, accepted_at: nil, inviter: jennifer, user: patrick
-    redirect_to membership
   end
 
   def setup_group_with_multiple_coordinators

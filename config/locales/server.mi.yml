@@ -13,6 +13,7 @@ mi:
     export:
       title: Taitara
       author: Kaituhi
+      email: Īmēra
       details: Ngā Taipitopito
       total: Tapeke
   footer:
@@ -22,6 +23,3 @@ mi:
     privacy: Matatapu
     public_groups: rōpū public
     terms: Ngā whakaritenga
-  poll_mailer:
-    common:
-      unsubscribe: Weteohauru

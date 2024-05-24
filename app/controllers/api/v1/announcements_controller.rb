@@ -1,7 +1,13 @@
 class API::V1::AnnouncementsController < API::V1::RestfulController
   def audience
     current_user.ability.authorize! :show, target_model
-    raise CanCan::AccessDenied if target_model.respond_to?(:anonymous) and target_model.anonymous
+    
+    if target_model.respond_to?(:anonymous) && 
+       target_model.anonymous &&
+       ['decided_voters', 'undecided_voters'].include?(params[:recipient_audience])
+      raise CanCan::AccessDenied 
+    end
+
     self.collection = AnnouncementService.audience_users(
       target_model,
       params[:recipient_audience],
@@ -18,6 +24,7 @@ class API::V1::AnnouncementsController < API::V1::RestfulController
       model: target_model,
       emails: String(params[:recipient_emails_cmr]).split(','),
       user_ids: String(params[:recipient_user_xids]).split('x').map(&:to_i),
+      chatbot_ids: String(params[:recipient_chatbot_xids]).split('x').map(&:to_i),
       audience: params[:recipient_audience],
       usernames: String(params[:recipient_usernames]).split(','),
       exclude_members: params[:exclude_members].present?,
@@ -41,16 +48,6 @@ class API::V1::AnnouncementsController < API::V1::RestfulController
   end
 
   def create
-    # juggle data for older clients
-    if params.dig(:announcement, :recipients)
-      params[:recipient_user_ids] = params.dig(:announcement, :recipients, :user_ids)
-      params[:recipient_emails] = params.dig(:announcement, :recipients, :emails)
-    end
-
-    %w[recipient_user_ids recipient_emails recipient_audience invited_group_ids message].each do |name|
-      params[name] = params.dig(:announcement, name) if params.dig(:announcement, name)
-    end
-
     if target_model.is_a?(Group)
       self.collection = GroupService.invite(group: target_model, actor: current_user, params: params)
       respond_with_collection serializer: MembershipSerializer, root: :memberships
@@ -84,10 +81,24 @@ class API::V1::AnnouncementsController < API::V1::RestfulController
 
     events = Event.where(kind: notification_kinds, id: target_event_ids).order('id desc').limit(1000)
 
+    allow_viewed = true
+
+    if target_model.respond_to?(:discussion) &&
+       target_model.discussion.present? &&
+       target_model.discussion.polls.kept.where(anonymous: true).any?
+      allow_viewed = false
+    end
+
+    if target_model.respond_to?(:poll) &&
+       target_model.poll.present? &&
+       target_model.poll.anonymous?
+      allow_viewed = false
+    end
+
     Notification.includes(:user).where(event_id: events.pluck(:id)).order('users.name, users.email').each do |notification|
       next unless notification.user
       notifications[notification.event_id] = [] unless notifications.has_key?(notification.event_id)
-      notifications[notification.event_id] << {id: notification.id, to: (notification.user.name || notification.user.email), viewed: notification.viewed}
+      notifications[notification.event_id] << {id: notification.id, to: (notification.user.name || notification.user.email), viewed: allow_viewed && notification.viewed }
     end
 
     res = events.map do |event|
@@ -98,7 +109,7 @@ class API::V1::AnnouncementsController < API::V1::RestfulController
        notifications: notifications[event.id] || [] }
     end.filter {|e| e[:notifications].size > 0}
 
-    render root: false, json: res
+    render root: false, json: {allow_viewed: allow_viewed, data: res}
   end
 
   private
@@ -136,8 +147,14 @@ class API::V1::AnnouncementsController < API::V1::RestfulController
   end
 
   def default_scope
+    if target_model && target_model.respond_to?(:group_id)
+      is_admin = target_model.group_id ? target_model.group.admins.exists?(current_user.id) : target_model.admins.exists?(current_user.id)
+    else
+      is_admin = false
+    end
+
     super.merge(
-      include_email: (target_model && target_model.admins.exists?(current_user.id))
+      include_email: (is_admin)
     )
   end
 

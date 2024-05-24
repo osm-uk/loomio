@@ -1,23 +1,33 @@
-<script lang="coffee">
-import Session from '@/shared/services/session'
+<script lang="js">
+import Session from '@/shared/services/session';
+import TemplateBadge from '@/components/poll/common/template_badge';
+import LmoUrlService from '@/shared/services/lmo_url_service';
 
-export default
-  props:
-    poll: Object
+export default {
+  components: {TemplateBadge},
+  props: {
+    poll: Object,
     displayGroupName: Boolean
-  methods:
-    showGroupName: ->
-      @displayGroupName && @poll.groupId
+  },
+  methods: {
+    showGroupName() {
+      return this.displayGroupName && this.poll.groupId;
+    }
+  },
+  computed: {
+    link() { return LmoUrlService.discussionPoll(this.poll); }
+  }
+};
 </script>
 
 <template lang="pug">
-v-list-item.poll-common-preview(:to='urlFor(poll)')
+v-list-item.poll-common-preview(:to='link')
   v-list-item-avatar
-    poll-common-chart-preview(:poll='poll')
+    poll-common-icon-panel(:poll='poll' show-my-stance)
   v-list-item-content
     v-list-item-title
-      | {{poll.title}}
-      tags-display(:tags="poll.tags()")
+      span {{poll.title}}
+      tags-display.ml-1(:tags="poll.tags" :group="poll.group()" smaller)
     v-list-item-subtitle
       span(v-t="{ path: 'poll_common_collapsed.by_who', args: { name: poll.authorName() } }")
       space

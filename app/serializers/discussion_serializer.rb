@@ -14,23 +14,26 @@ class DiscussionSerializer < ApplicationSerializer
              :key,
              :group_id,
              :title,
+             :tags,
              :content_locale,
              :description,
              :description_format,
+             :discussion_template_id,
              :ranges,
              :items_count,
              :last_comment_at,
              :last_activity_at,
              :closed_at,
+             :closer_id,
              :seen_by_count,
              :members_count,
              :created_at,
              :updated_at,
              :private,
              :versions_count,
-             :importance,
-             :pinned,
+             :pinned_at,
              :attachments,
+             :link_previews,
              :mentioned_usernames,
              :newest_first,
              :max_depth,
@@ -39,6 +42,7 @@ class DiscussionSerializer < ApplicationSerializer
 
   attributes_from_reader :discussion_reader_id,
                          :discussion_reader_volume,
+                         :discussion_reader_user_id,
                          :last_read_at,
                          :dismissed_at,
                          :read_ranges,
@@ -51,9 +55,13 @@ class DiscussionSerializer < ApplicationSerializer
   has_many :active_polls, serializer: PollSerializer, root: :polls
   has_one :created_event, serializer: EventSerializer, root: :events
   has_one :forked_event, serializer: EventSerializer, root: :events
-  has_many :tags, serializer: TagSerializer, root: :tags
+  has_one :closer, serializer: AuthorSerializer, root: :users
 
   hide_when_discarded [:description, :title]
+
+  def include_closer?
+    object.closer_id.present?
+  end
 
   def include_mentioned_usernames?
     description_format == "md"
@@ -64,15 +72,12 @@ class DiscussionSerializer < ApplicationSerializer
   end
 
   def reader
+    # we don't initialize readers if no current user id, because discussions can be group messages
     cache_fetch(:discussion_readers_by_discussion_id, object.id) do
-      if scope[:current_user_id]
-        m = cache_fetch(:memberships_by_group_id, object.group_id) { nil }
-        # DiscussionReader.find_or_initialize_by(user_id: scope[:current_user_id], discussion_id: object.id) do |dr|
-        #   dr.volume = (m && m.volume) || 'normal'
-        # end
-        DiscussionReader.new(user_id: scope[:current_user_id], discussion_id: object.id, volume: (m && m.volume) || 'normal')
-      else
-        DiscussionReader.new(discussion: object)
+      return nil unless scope[:current_user_id]
+      m = cache_fetch(:memberships_by_group_id, object.group_id) { nil }
+      DiscussionReader.find_or_initialize_by(user_id: scope[:current_user_id], discussion_id: object.id) do |dr|
+        dr.volume = (m && m.volume) || 'normal'
       end
     end
   end

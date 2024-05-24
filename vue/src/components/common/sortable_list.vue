@@ -1,10 +1,10 @@
-<script lang="coffee">
-import { ContainerMixin } from 'vue-slicksort'
+<script lang="js">
+import { ContainerMixin } from 'vue-slicksort';
 
 export default
-  mixins: [ContainerMixin]
+  ({mixins: [ContainerMixin]});
 </script>
 <template lang="pug">
-v-list.list(:transitionDuration="250" :lockAxis="'y'")
+.list(:transitionDuration="250" lockAxis="y")
   slot
 </template>

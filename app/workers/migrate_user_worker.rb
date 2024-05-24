@@ -6,19 +6,15 @@ class MigrateUserWorker
   def perform(source_id, destination_id)
     @source = User.find_by!(id: source_id)
     @destination = User.find_by!(id: destination_id)
-    unarchive_memberships(@source)
     delete_duplicates
     operations.each { |operation| ActiveRecord::Base.connection.execute(operation) }
     migrate_stances
     update_counters
-    DeactivateUserWorker.new.perform(source_id)
-    UserMailer.delay.accounts_merged(destination.id)
+    RedactUserWorker.new.perform(source_id, destination_id, false)
+    UserMailer.accounts_merged(destination.id).deliver_later
   end
 
   SCHEMA = {
-    ahoy_visits: :user_id,
-    ahoy_events: :user_id,
-    ahoy_messages: :user_id,
     attachments: :user_id,
     documents: :author_id,
     comments: :user_id,
@@ -37,10 +33,6 @@ class MigrateUserWorker
     polls: :author_id,
     versions: :whodunnit
   }.freeze
-
-  def unarchive_memberships(user)
-    Membership.where(user_id: user.id).where('archived_at is not null').update_all(archived_at: nil)
-  end
 
   def delete_duplicates
     Membership.delete(destination.all_memberships.
@@ -63,7 +55,7 @@ class MigrateUserWorker
   end
 
   def migrate_stances
-    Stance.where(participant: source).update_all(participant_id: destination.id)
+    Stance.where(participant: source).update_all(participant_id: destination.id, latest: false)
     Stance.where(participant: destination).update_all(latest: false)
 
     poll_ids = Stance.where(participant: destination).pluck(:poll_id).uniq
@@ -83,11 +75,7 @@ class MigrateUserWorker
       destination.authored_polls,
       destination.group_polls,
       destination.participated_polls
-    ].flatten.uniq.each do |poll|
-      poll.update_undecided_voters_count
-      poll.update_voters_count
-      poll.update_stance_data
-    end
+    ].flatten.uniq.each(&:update_counts!)
 
     [source, destination].each do |user|
       user.update_memberships_count

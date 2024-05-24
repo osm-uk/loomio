@@ -12,7 +12,7 @@ class EventSerializer < ApplicationSerializer
   has_one :source_group, serializer: GroupSerializer, root: :groups
 
   def parent
-    cache_fetch(:events_by_id, object.parent_id) { nil }
+    cache_fetch(:events_by_id, object.parent_id) { object.parent }
   end
 
   def include_eventable?
@@ -31,7 +31,7 @@ class EventSerializer < ApplicationSerializer
     when 'Group' then cache_fetch(:groups_by_id, object.eventable_id) { object.eventable }
     when 'MembershipRequest' then cache_fetch(:membership_requests_by_id, object.eventable_id) { object.eventable }
     else
-      raise "waht is it? #{object.eventable} #{object.kind}"
+      # raise "waht is it? #{object.eventable} #{object.kind}"
       object.eventable
     end
   end

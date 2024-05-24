@@ -4,11 +4,10 @@ bg_BG:
   loomio_tags:
     name_label: Име
   common:
+    version: Версия
     group: 'Група'
     groups: 'Групи'
     email_address: E-mail адрес
-    models:
-      proposal: 'Предложение'
     action:
       save: 'Запис'
       edit: 'Редактиране'
@@ -42,6 +41,8 @@ bg_BG:
     form:
       invitation_message_label: Съобщение
       poll_reminder:
+        message_label: Съобщение
+      wip_poll_reminder:
         message_label: Съобщение
   join_group_button:
     membership_requested: Поискано членство
@@ -80,16 +81,8 @@ bg_BG:
     close_thread: 'Затваряне'
   delete_comment_dialog:
     title: 'Изтрий коментар'
-    question: 'Сигурни ли сте, че искате да изтриете този коментар?'
-    confirm: 'Изтрий коментар'
   contact_message_form:
     subject_label: "Тема"
-  hint:
-    context: 'Насоки за използване на панела за контекста'
-    discussion: 'Насоки за започване на дискусия за приобщаване'
-    invitation: 'Насоки за писане на страхотни покани'
-    proposal: 'Насоки за писане на чисти предложения'
-    vote: 'Можете да промените позицията си по всяко време'
   poll_common:
     have_your_say: Кажете си думата
     save_changes: Запис
@@ -104,12 +97,10 @@ bg_BG:
     closed: 'Затворен'
   poll_common_form:
     closed: Затворен
+  chatbot:
+    password: Парола
   webhook:
     name_label: Име
   group_survey:
     categories:
-      other: Друго
-    uses:
-      other: Друго
-    referrers:
       other: Друго

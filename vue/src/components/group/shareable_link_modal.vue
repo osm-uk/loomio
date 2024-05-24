@@ -1,78 +1,88 @@
-<script lang="coffee">
-import Records        from '@/shared/services/records'
-import EventBus       from '@/shared/services/event_bus'
-import utils          from '@/shared/record_store/utils'
-import LmoUrlService  from '@/shared/services/lmo_url_service'
-import AbilityService from '@/shared/services/ability_service'
+<script lang="js">
+import Records        from '@/shared/services/records';
+import EventBus       from '@/shared/services/event_bus';
+import utils          from '@/shared/record_store/utils';
+import LmoUrlService  from '@/shared/services/lmo_url_service';
+import AbilityService from '@/shared/services/ability_service';
 
-import Flash   from '@/shared/services/flash'
+import Flash   from '@/shared/services/flash';
 
 
 export default
-  props:
+{
+  props: {
     group: Object
-  data: ->
-    dialog: false
+  },
+  data() {
+    return {dialog: false};
+  },
 
-  methods:
-    error: ->
-      Flash.error('invitation_form.error')
+  methods: {
+    copyText(text) {
+      navigator.clipboard.writeText(text).then(() => Flash.success('common.copied')
+      , () => Flash.error('invitation_form.error'));
+    },
 
-    copiedGroupUrl: (e) ->
-      @$copyText(e.text, @$refs.groupUrlButton.$el)
-      Flash.success('common.copied')
+    resetInvitationLink() {
+      this.group.resetToken().then(() => {
+        Flash.success('invitation_form.shareable_link_reset');
+      });
+    }
+  },
 
-    copiedInvitationUrl: (e) ->
-      @$copyText(e.text, @$refs.invitationUrlButton.$el)
-      Flash.success('common.copied')
+  computed: {
+    groupUrl() {
+      return LmoUrlService.group(this.group, null, { absolute: true });
+    },
 
-    resetInvitationLink: ->
-      @group.resetToken().then =>
-        Flash.success('invitation_form.shareable_link_reset')
+    invitationLink() {
+      if (this.group.token) {
+        return LmoUrlService.shareableLink(this.group);
+      } else {
+        return this.$t('common.action.loading');
+      }
+    },
 
-  computed:
-    groupUrl: ->
-      LmoUrlService.group(@group, null, { absolute: true })
+    canAddMembers() {
+      return AbilityService.canAddMembersToGroup(this.group) && !this.pending;
+    }
+  },
 
-    invitationLink: ->
-      if @group.token
-        LmoUrlService.shareableLink(@group)
-      else
-        @$t('common.action.loading')
-
-    canAddMembers: ->
-      AbilityService.canAddMembersToGroup(@group) && !@pending
-
-  watch:
-    dialog: (val) ->
-      @group.fetchToken() if !!val
-
+  watch: {
+    dialog(val) {
+      if (!!val) { this.group.fetchToken(); }
+    }
+  }
+};
 </script>
 
 <template lang="pug">
 v-dialog(v-model='dialog' max-width="600px")
   template(v-slot:activator="{ on, attrs }")
-    v-btn.mr-2(v-on="on" v-bind="attrs" color="accent" v-t="'common.action.share'")
+    v-btn.mr-2(v-on="on" v-bind="attrs" color="primary" outlined v-t="'members_panel.sharable_link'")
   v-card.shareable-link-modal
     v-card-title
-      h1.headline(tabindex="-1" v-t="'invitation_form.share_group'")
+      h1.text-h5(tabindex="-1" v-t="'invitation_form.share_group'")
       v-spacer
-      v-btn(icon small href="https://help.loomio.org/en/user_manual/groups/membership/" target="_blank" :title="$t('common.help')")
-        v-icon mdi-help-circle-outline
       v-btn.dismiss-modal-button(icon small @click='dialog = false')
-        v-icon mdi-window-close
+        common-icon(name="mdi-window-close")
     v-card-text
-      span.subtitle-2(v-t="'invitation_form.group_url'")
-      p.mt-2.mb-0.caption(v-if="group.groupPrivacy == 'secret'" v-t="'invitation_form.secret_group_url_explanation'")
-      p.mt-2.mb-0.caption(v-else v-t="'invitation_form.shareable_group_url_explanation'")
-      v-layout(align-center)
-        v-text-field.shareable-link-modal__shareable-link(:value='groupUrl' :disabled='true')
-        v-btn.shareable-link-modal__copy(ref="groupUrlButton" text color="accent" v-t="'common.copy'" v-clipboard:copy='groupUrl' v-clipboard:success='copiedGroupUrl' v-clipboard:error="error")
+      template(v-if="group.groupPrivacy != 'secret'")
+        span.text-subtitle-2(v-t="'invitation_form.group_url'")
+        p.mt-2.mb-0.text-caption(v-t="'invitation_form.secret_group_url_explanation'")
+        v-layout(align-center)
+          v-text-field.shareable-link-modal__shareable-link(:value='groupUrl' :disabled='true')
+          v-btn.shareable-link-modal__copy(icon color="primary" :title="$t('common.copy')" @click='copyText(groupUrl)')
+            common-icon(name="mdi-content-copy")
       div(v-if="canAddMembers")
-        span.subtitle-2(v-t="'invitation_form.reusable_invitation_link'")
-        p.mt-2.mb-0.caption(v-t="'invitation_form.shareable_invitation_explanation'")
+        span.text-subtitle-2(v-t="'invitation_form.reusable_invitation_link'")
+        p.mt-2.mb-0.text-caption(v-t="'invitation_form.shareable_invitation_explanation'")
         v-layout(align-center)
           v-text-field.shareable-link-modal__shareable-link(:value='invitationLink' :disabled='true')
-          v-btn.shareable-link-modal__copy(ref="invitationUrlButton" text color="accent" v-t="'common.copy'" v-clipboard:copy='invitationLink' v-clipboard:success='copiedInvitationUrl' v-clipboard:error="error")
-          v-btn.shareable-link-modal__reset(text color="warning" v-t="'common.reset'" @click="resetInvitationLink()")
+          v-btn.shareable-link-modal__copy(icon color="primary" :title="$t('common.copy')" @click='copyText(invitationLink)')
+            common-icon(name="mdi-content-copy")
+          v-btn.shareable-link-modal__reset(icon color="warning" :title="$t('common.reset')" @click="resetInvitationLink()")
+            common-icon(name="mdi-lock-reset")
+
+      v-btn(href="https://help.loomio.org/en/user_manual/groups/membership/" target="_blank" v-t="'common.help'")
 </template>

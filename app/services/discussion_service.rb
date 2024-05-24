@@ -10,16 +10,12 @@ class DiscussionService
 
     discussion.author = actor
 
-    #these should really be sent from the client, but it's ok here for now
-    discussion.max_depth = discussion.group.new_threads_max_depth
-    discussion.newest_first = discussion.group.new_threads_newest_first
-
     return false unless discussion.valid?
 
     discussion.save!
 
     DiscussionReader.for(user: actor, discussion: discussion)
-                    .update(admin: true, inviter_id: actor.id)
+                    .update(admin: true, guest: !discussion.group.present?, inviter_id: actor.id)
 
     users = add_users(user_ids: params[:recipient_user_ids],
                       emails: params[:recipient_emails],
@@ -30,6 +26,7 @@ class DiscussionService
     EventBus.broadcast('discussion_create', discussion, actor)
     Events::NewDiscussion.publish!(discussion: discussion,
                                    recipient_user_ids: users.pluck(:id),
+                                   recipient_chatbot_ids: params[:recipient_chatbot_ids],
                                    recipient_audience: params[:recipient_audience])
 
   end
@@ -50,7 +47,7 @@ class DiscussionService
     discussion.save!
 
     discussion.update_versions_count
-    EventService.delay.repair_thread(discussion.id) if rearrange
+    RepairThreadWorker.perform_async(discussion.id) if rearrange
 
     users = add_users(discussion: discussion,
                       actor: actor,
@@ -63,6 +60,7 @@ class DiscussionService
     Events::DiscussionEdited.publish!(discussion: discussion,
                                       actor: actor,
                                       recipient_user_ids: users.pluck(:id),
+                                      recipient_chatbot_ids: params[:recipient_chatbot_ids],
                                       recipient_audience: params[:recipient_audience],
                                       recipient_message: params[:recipient_message])
   end
@@ -83,38 +81,39 @@ class DiscussionService
     Events::DiscussionAnnounced.publish!(discussion: discussion,
                                          actor: actor,
                                          recipient_user_ids: users.pluck(:id),
+                                         recipient_chatbot_ids: params[:recipient_chatbot_ids],
                                          recipient_audience: params[:recipient_audience],
                                          recipient_message: params[:recipient_message])
   end
 
-  def self.destroy(discussion:, actor:)
-    actor.ability.authorize!(:destroy, discussion)
-    discussion.discard!
-    DestroyDiscussionWorker.perform_async(discussion.id)
-    EventBus.broadcast('discussion_destroy', discussion, actor)
-  end
+  # def self.destroy(discussion:, actor:)
+  #   actor.ability.authorize!(:destroy, discussion)
+  #   discussion.discard!
+  #   DestroyDiscussionWorker.perform_async(discussion.id)
+  #   EventBus.broadcast('discussion_destroy', discussion, actor)
+  # end
 
   def self.discard(discussion:, actor:)
     actor.ability.authorize!(:discard, discussion)
-    discussion.discard!
+    discussion.update(discarded_at: Time.now, discarded_by: actor.id)
+
+    discussion.polls.update_all(discarded_at: Time.now, discarded_by: actor.id)
+    GenericWorker.perform_async('SearchService', 'reindex_by_discussion_id', discussion.id)
+
     EventBus.broadcast('discussion_discard', discussion, actor)
     discussion.created_event
   end
 
   def self.close(discussion:, actor:)
     actor.ability.authorize! :update, discussion
-    discussion.update(closed_at: Time.now)
-
-    EventBus.broadcast('discussion_close', discussion, actor)
-    Events::DiscussionClosed.publish!(discussion, actor)
+    discussion.update(closed_at: Time.now, closer_id: actor.id)
+    MessageChannelService.publish_models([discussion], group_id: discussion.group_id, user_id: actor.id)
   end
 
   def self.reopen(discussion:, actor:)
     actor.ability.authorize! :update, discussion
-    discussion.update(closed_at: nil)
-
-    EventBus.broadcast('discussion_reopen', discussion, actor)
-    Events::DiscussionReopened.publish!(discussion, actor)
+    discussion.update(closed_at: nil, closer_id: nil)
+    MessageChannelService.publish_models([discussion], group_id: discussion.group_id, user_id: actor.id)
   end
 
   def self.move(discussion:, params:, actor:)
@@ -128,6 +127,7 @@ class DiscussionService
     discussion.polls.each { |poll| poll.update(group: destination.presence) }
     ActiveStorage::Attachment.where(record: discussion.items.map(&:eventable).concat([discussion])).update_all(group_id: destination.id)
 
+    GenericWorker.perform_async('SearchService', 'reindex_by_discussion_id', discussion.id)
     EventBus.broadcast('discussion_move', discussion, params, actor)
     Events::DiscussionMoved.publish!(discussion, actor, source)
   end
@@ -135,19 +135,17 @@ class DiscussionService
   def self.pin(discussion:, actor:)
     actor.ability.authorize! :pin, discussion
 
-    discussion.update(pinned: !discussion.pinned)
+    discussion.update(pinned_at: Time.now)
 
     EventBus.broadcast('discussion_pin', discussion, actor)
   end
 
-  def self.fork(discussion:, actor:)
-    actor.ability.authorize! :fork, discussion
-    source = discussion.forked_items.first.discussion
+  def self.unpin(discussion:, actor:)
+    actor.ability.authorize! :pin, discussion
 
-    return false unless event = create(discussion: discussion, actor: actor)
+    discussion.update(pinned_at: nil)
 
-    EventBus.broadcast('discussion_fork', source, event.eventable, actor)
-    Events::DiscussionForked.publish!(event.eventable, source)
+    EventBus.broadcast('discussion_pin', discussion, actor)
   end
 
   def self.update_reader(discussion:, params:, actor:)
@@ -174,7 +172,7 @@ class DiscussionService
     actor.ability.authorize! :mark_as_read, discussion
     RetryOnError.with_limit(2) do
       sequence_ids = RangeSet.ranges_to_list(RangeSet.to_ranges(params[:ranges]))
-      NotificationService.delay.viewed_events(actor_id: actor.id, discussion_id: discussion.id, sequence_ids: sequence_ids)
+      NotificationService.viewed_events(actor_id: actor.id, discussion_id: discussion.id, sequence_ids: sequence_ids)
       reader = DiscussionReader.for_model(discussion, actor)
       reader.viewed!(params[:ranges])
       EventBus.broadcast('discussion_mark_as_read', reader, actor)
@@ -203,10 +201,10 @@ class DiscussionService
     end
   end
 
-  def self.mark_summary_email_as_read(user_id, params)
+  def self.mark_summary_email_as_read(user_id, time_start_i, time_finish_i)
     user = User.find_by!(id: user_id)
-    time_start  = Time.at(params[:time_start].to_i).utc
-    time_finish = Time.at(params[:time_finish].to_i).utc
+    time_start  = Time.at(time_start_i).utc
+    time_finish = Time.at(time_finish_i).utc
     time_range = time_start..time_finish
 
     DiscussionQuery.visible_to(user: user, only_unread: true, or_public: false, or_subgroups: false).last_activity_after(time_start).each do |discussion|
@@ -230,11 +228,17 @@ class DiscussionService
                      user_id: users.pluck(:id)).find_each do |m|
       volumes[m.user_id] = m.volume
     end
+    
+    DiscussionReader.
+      where(discussion_id: discussion.id, user_id: users.map(&:id)).
+      where("revoked_at is not null").update_all(revoked_at: nil, revoker_id: nil)
 
     new_discussion_readers = users.map do |user|
       DiscussionReader.new(user: user,
                            discussion: discussion,
-                           inviter: if volumes[user.id] then nil else actor end,
+                           inviter: actor,
+                           guest: !volumes.has_key?(user.id),
+                           admin: !discussion.group_id,
                            volume: volumes[user.id] || DiscussionReader.volumes[:normal])
     end
 
@@ -244,4 +248,13 @@ class DiscussionService
     users
   end
 
+  def self.extract_link_preview_urls(discussion)
+    urls = discussion.link_previews.map { |lp| lp['url'] }
+    discussion.items.each do |event|
+      if event.eventable.present? && event.eventable.respond_to?(:link_previews)
+        urls.concat(event.eventable.link_previews.map {|lp| lp['url']})
+      end
+    end
+    urls.compact.uniq
+  end
 end

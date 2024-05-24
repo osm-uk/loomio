@@ -55,23 +55,8 @@ describe UserMailer do
     end
   end
 
-  describe 'contact request' do
-    let(:user) { create :user }
-    let(:sender) { create :user }
-    let(:group) { create :group }
-    let(:request) { ContactRequest.new(sender: sender, recipient_id: user.id, message: "Here's a message") }
-    subject { UserMailer.contact_request(contact_request: request).deliver_now }
-
-    it 'sends a contact request' do
-      expect { subject }.to change { ActionMailer::Base.deliveries.count }.by(1)
-      last_email = ActionMailer::Base.deliveries.last
-      expect(last_email.to).to include user.email
-      expect(last_email.reply_to).to include sender.email
-    end
-  end
-
   describe 'catch_up' do
-    let(:user) { create :user, email_catch_up: true }
+    let(:user) { create :user, email_catch_up_day: 7 }
     subject { UserMailer.catch_up(user.id).deliver_now }
     let(:discussion) { build :discussion, group: group }
     let(:invite_only_discussion) { build :discussion, group: nil }
@@ -101,10 +86,43 @@ describe UserMailer do
     end
 
     it 'does not send a missed yesterday email if I have unsubscribed' do
-      user.update(email_catch_up: false)
-      some_content
-      expect { subject }.to_not change { ActionMailer::Base.deliveries.count }
+      user.update(email_catch_up_day: nil)
+      travel_to Time.now.in_time_zone(user.time_zone).next_occurring(:monday).change(hour: 6) do
+        some_content
+        expect { SendDailyCatchUpEmailWorker.new.perform }.to_not change { ActionMailer::Base.deliveries.count }
+      end
+    end
+
+    it 'emails daily when 7' do
+      user.update(email_catch_up_day: 7)
+      travel_to Time.now.in_time_zone(user.time_zone).next_occurring(:monday).change(hour: 6) do
+        some_content
+        expect { SendDailyCatchUpEmailWorker.new.perform }.to change { ActionMailer::Base.deliveries.count }.by(1)
+      end
+    end
+
+    it 'emails mondays when monday at 6am' do
+      user.update(email_catch_up_day: 1)
+      travel_to Time.now.in_time_zone(user.time_zone).next_occurring(:monday).change(hour: 6) do
+        some_content
+        expect { SendDailyCatchUpEmailWorker.new.perform }.to change { ActionMailer::Base.deliveries.count }.by(1)
+      end
+    end
+
+    it 'does not email mondays when monday at 5am' do
+      user.update(email_catch_up_day: 1)
+      travel_to Time.now.in_time_zone(user.time_zone).next_occurring(:monday).change(hour: 5) do
+        some_content
+        expect { SendDailyCatchUpEmailWorker.new.perform }.to_not change { ActionMailer::Base.deliveries.count }
+      end
+    end
+
+    it 'does not emails mondays when tuesday' do
+      user.update(email_catch_up_day: 1)
+      travel_to  Time.now.in_time_zone(user.time_zone).next_occurring(:tuesday).change(hour: 6)  do
+        some_content
+        expect { SendDailyCatchUpEmailWorker.new.perform }.to_not change { ActionMailer::Base.deliveries.count }
+      end
     end
   end
-
 end

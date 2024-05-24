@@ -2,11 +2,38 @@ html {
   font-family: "Roboto", sans-serif;
 }
 
+
 body {
-  background-color: #f7f7ed;
+  background-color: rgb(252,246,235);
   color: rgba(0,0,0,0.9);
   margin: 1em auto;
   line-height: 1.5;
+}
+
+h1,h2 {
+  margin: 1em 0;
+}
+h3 {
+  margin: 0.5em 0;
+}
+p {
+  margin-bottom: 16px;
+}
+
+table {
+  width: 100%
+}
+table td {
+  padding: 0.2em
+}
+
+pre {
+  border-radius: 4px;
+  padding: 1em;
+  background: #eee;
+  word-wrap: normal;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
 }
 
 header {
@@ -27,10 +54,3 @@ footer {
   }
 }
 
-main {
-  background-color: #fff;
-  padding: 1em;
-  margin: 1em;
-  border-radius: 20px;
-  box-shadow: 1px 1px 4px #999;
-}

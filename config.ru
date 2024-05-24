@@ -1,6 +1,11 @@
-# This file is used by Rack-based servers to start the application.
-require ::File.expand_path('../config/environment',  __FILE__)
+require_relative "config/environment"
 
-# Redirect to non-www address (https://github.com/tylerhunt/rack-canonical-host)
-#use Rack::CanonicalHost, ENV['CANONICAL_HOST'] if ENV['CANONICAL_HOST']
-run Loomio::Application
+if ENV["MAINTENANCE"]
+  require "pathname"
+  MAINTENANCE_HTML = Pathname.new(File.dirname(__FILE__)).join("public/maintenance.html").read
+
+  run lambda { |env| [ 200, { "Content-Type" => "text/html" }, [ MAINTENANCE_HTML ] ] }
+else
+	run Rails.application
+	Rails.application.load_server
+end

@@ -1,6 +1,6 @@
-require File.expand_path('../boot', __FILE__)
+require_relative "boot"
 
-require 'rails/all'
+require "rails/all"
 
 Bundler.require(*Rails.groups)
 
@@ -19,51 +19,35 @@ end
 
 module Loomio
   class Application < Rails::Application
-    # we should work out how to enable this but I think it will be hard
-    # config.load_defaults 6.0
-    # config.autoloader = :classic
+    config.load_defaults 6.0
+    config.middleware.use Rack::Deflater
     config.middleware.use Rack::Attack
-    # config.active_job.queue_adapter = :sidekiq
+    config.active_job.queue_adapter = :sidekiq
 
     config.generators do |g|
       g.template_engine :haml
       g.test_framework  :rspec, :fixture => false
     end
 
-    # Settings in config/environments/* take precedence over those specified here.
-    # Application configuration should go into files in config/initializers
-    # -- all .rb files in that directory are automatically loaded.
+    logger           = ActiveSupport::Logger.new(STDOUT)
+    logger.formatter = config.log_formatter
+    config.logger    = ActiveSupport::TaggedLogging.new(logger)
+    config.log_level = ENV.fetch('RAILS_LOG_LEVEL', :info)
 
-    # Custom directories with classes and modules you want to be autoloadable.
-    # config.paths.add "extras", eager_load: true
-    # config.autoload_paths += Dir["#{config.root}/app/forms/**/"]
+    config.active_record.belongs_to_required_by_default = false
 
-    # Only load the plugins named here, in the order given (default is alphabetical).
-    # :all can be used as a placeholder for all plugins not explicitly named.
-    # config.plugins = [ :exception_notification, :ssl_requirement, :all ]
-
-    # Activate observers that should always be running.
-    # config.active_record.observers = :cacher, :garbage_collector, :forum_observer
-
-    # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
-    # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
-    # config.time_zone = 'Central Time (US & Canada)'
-
-    # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
-    # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
-    # config.i18n.default_locale = :de
-
-    # config.i18n.available_locales = # --> don't use this, make mostly empty yml files e.g. fallback.be.yml
-    config.force_ssl = Rails.env.production?
-    config.ssl_options = { redirect: { exclude: -> request { request.path =~ /(received_emails|email_processor)/ } } }
+    config.force_ssl = ENV['FORCE_SSL'].present?
+    config.ssl_options = { redirect: { exclude: -> request { request.path =~ /(received_emails|email_processor|up)/ } } }
 
     config.i18n.enforce_available_locales = false
-    config.i18n.fallbacks = [:en] # --> see initilizers/loomio_i18n
-    config.assets.quiet = true
+    config.i18n.fallbacks = [:en]
 
-    # Configure the default encoding used in templates for Ruby 1.9.
+    # config.assets.quiet = true
+    # config.quiet_assets = true
+
     config.encoding = "utf-8"
 
+    config.action_controller.action_on_unpermitted_parameters = :raise
     # Configure sensitive parameters which will be filtered from the log file.
     config.filter_parameters += [:password]
 
@@ -76,32 +60,14 @@ module Loomio
     # required for heroku
     config.assets.initialize_on_precompile = false
 
-    config.quiet_assets = true
     config.action_mailer.preview_path = "#{Rails.root}/spec/mailers/previews"
+
+    config.active_storage.variant_processor = :vips
 
     if ENV['AWS_BUCKET']
       config.active_storage.service = :amazon
     else
-      config.active_storage.service = :local
-    end
-
-    # we plan to remove fog and paperclip once we've migrated to active storage
-    if ENV['FOG_PROVIDER']
-      def self.fog_credentials
-        env = Rails.application.secrets
-        case env.fog_provider
-        when 'AWS'   then { aws_access_key_id: env.aws_access_key_id, aws_secret_access_key: env.aws_secret_access_key }
-        when 'Local' then { local_root: [Rails.root, 'public'].join('/'), endpoint: env.canonical_host }
-        end.merge(provider: env.fog_provider)
-      end
-
-      # Store avatars on Amazon S3
-      config.paperclip_defaults = {
-        storage: :fog,
-        fog_credentials: fog_credentials,
-        fog_directory: Rails.application.secrets.fog_uploads_directory,
-        fog_public: true
-      }
+      config.active_storage.service = ENV.fetch('ACTIVE_STORAGE_SERVICE', :local)
     end
 
     config.action_mailer.raise_delivery_errors = true
@@ -116,20 +82,16 @@ module Loomio
         user_name: ENV['SMTP_USERNAME'],
         password: ENV['SMTP_PASSWORD'],
         domain: ENV['SMTP_DOMAIN'],
-        ssl: ENV['SMTP_USE_SSL'],
+        ssl: ENV['SMTP_USE_SSL'].present?,
         openssl_verify_mode: ENV.fetch('SMTP_SSL_VERIFY_MODE', 'none') # options: none, peer, client_once, fail_if_no_peer_cert
       }.compact
     else
       config.action_mailer.delivery_method = :test
     end
 
-    port = ENV['CANONICAL_PORT']
-    port = 3000 if Rails.env.development? or Rails.env.test?
-    port = 8080 if ENV['USE_VUE']
-
     config.action_mailer.default_url_options = config.action_controller.default_url_options = {
       host:     ENV['CANONICAL_HOST'],
-      port:     port,
+      port:     ENV['CANONICAL_PORT'],
       protocol: ENV['FORCE_SSL'] ? 'https' : 'http'
     }.compact
 
@@ -145,13 +107,19 @@ module Loomio
     config.cache_store = :redis_cache_store, { url: (ENV['REDIS_CACHE_URL'] || ENV.fetch('REDIS_URL', 'redis://localhost:6379')) }
     config.action_dispatch.use_cookies_with_metadata = false
 
+    if ENV['DISABLE_IPSPOOFINGCHECK']
+      config.action_dispatch.ip_spoofing_check = false
+    end
+
     config.action_dispatch.default_headers = {
-      # 'X-Frame-Options' => 'SAMEORIGIN',
+      'X-Frame-Options' => 'SAMEORIGIN',
       'X-XSS-Protection' => '1; mode=block',
       'X-Content-Type-Options' => 'nosniff',
       'X-Download-Options' => 'noopen',
       'X-Permitted-Cross-Domain-Policies' => 'none',
       'Referrer-Policy' => 'strict-origin-when-cross-origin'
     }
+
+    config.active_storage.content_types_allowed_inline = %w(audio/webm video/webm image/png image/gif image/jpeg image/tiff image/vnd.adobe.photoshop image/vnd.microsoft.icon application/pdf)
   end
 end

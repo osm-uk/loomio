@@ -1,23 +1,262 @@
 ---
 en:
+  discussion_templates:
+    blank:
+      process_name: Blank template
+      process_subtitle: Start a new thread for any purpose
+      process_introduction: "<p>Start a thread in your group about any topic you like.</p>
+        <p>By default everyone in the group will be notified when you start the thread. You can change this by editing the 'invite' field below.</p>"
+
+    discuss_a_topic:
+      title_placeholder: What is the topic you want to discuss?
+      process_name: Discuss a topic
+      process_subtitle: Start a discussion with your group
+      process_introduction: "<p>Is there an issue, problem or opportunity you wish to
+        raise with your group?</p><p>Introduce the topic, link to any background information
+        and ask for comments, ideas and help.</p><p>Invite people to participate by contributing
+        their thoughts and relevant information. Use @mention to get the attention of
+        particular people.</p><p>Update the thread context as the discussion progresses
+        to facilitate it towards an outcome.</p><p>Don't wait until you have all the info
+        to start a thread. Rather use the thread to invite people to help you explore
+        the topic and figure out a resolution.</p>"
+      description: <h3 id="introduce-and-describe-the-topic">Introduce and describe the
+        topic</h3><p></p><h3 id="why-is-this-important">Why is this important?</h3><p></p><h3
+        id="how-would-you-like-people-to-respond">How would you like people to respond?</h3><p></p>
+    onboarding_to_loomio:
+      title: Using Loomio for our group
+      process_name: Onboarding to Loomio
+      process_subtitle: A thread to help people new to Loomio practice writing comments and voting.
+      process_introduction: "<p>Use this template to introduce people to Loomio.</p><p>A
+        great way to experience Loomio is by opening a discussion in Loomio and make a
+        decision!</p><p>Get the discussion started by following the text prompts below
+        or insert your own words.</p><p>Run a Sense check so your group can vote and see
+        the results.</p><p>Unlock the value of Loomio by involving people in their first
+        decision.</p>"
+      description: <h3 id="why-are-you-interested-in-using-loomio">Why are you interested
+        in using Loomio?</h3><p>We are interested in using Loomio to involve people in
+        decisions about our organization.</p><h3 id="what-are-you-asking-people-to-do">What
+        are you asking people to do?</h3><p>I would love to hear your thoughts! Leave
+        a comment below and vote in the proposal.</p><p>You can reply to someone's comment
+        by clicking on the reply icon located at the bottom right of the comment.</p><p>Use
+        @mention to notify people.</p>
+      onboarding: Onboarding
+    consent_process:
+      title_placeholder: Developing our Health and Safety Policy
+      process_name: Consent process
+      process_subtitle: Make a decision that is ‘safe to try’, without objections.
+      process_introduction: '<p>Seek consent on a decision you need to make, where there
+        are no meaningful objections to your proposal, so you can make a fast decision
+        that is ''safe to try'' now.</p><p>Typical roles:</p><ul><li><p>Proposer: The
+        person who raises a topic that requires a decision.</p></li><li><p>Facilitator:
+        Someone who can help the proposer do their job efficiently.</p></li></ul><p>Common
+        process steps:</p><p>Step 1. Present a proposal with a Loomio thread.</p><p>Step
+        2. Facilitate a round of questions, reactions and any comments to improve the
+        proposal with a Sense check.</p><p>Step 3. Amend the proposal with suggestions
+        and comments.</p><p>Step 4. Ask if anyone has a meaningful objection to the amended
+        proposal with a Consent proposal.</p><p>Step 5. Integrate valid objections to
+        create an amended version of the proposal that everyone consents is ‘safe to try’,
+        and when completed state the decision outcome.</p><p><a target="_blank" rel="noopener
+        noreferrer nofollow" href="https://help.loomio.com/en/guides/consent_process/index.html">Read
+        more: Consent process.</a></p>'
+      description: <h3 id="what-is-the-decision-you-need-to-make">What is the decision
+        you need to make?</h3><h3 id=""></h3><h3 id="why-is-this-important-and-what-impact-does-it-have">Why
+        is this important and what impact does it have?</h3><p></p><h3 id="what-information-do-people-need-for-context">What
+        information do people need for context?</h3><p></p><h3 id="who-is-the-facilitator-for-this-process">Who
+        is the facilitator for this process?</h3><p></p>
+      consent: Consent
+    advice_process:
+      title_placeholder: Seeking advice to purchase a new computer
+      process_name: Advice process
+      process_subtitle: Seek advice on a decision you need to make.
+      process_introduction: '<p>Make a decision with the advice of people impacted or
+        who have expertise, so you can make a better decision for your organization.</p><p>Typical
+        roles:</p><ul><li><p>Facilitator: The person making the decision, or ask someone
+        to facilitate.</p></li><li><p>Advisers: People who are impacted or have expertise
+        that you invite.</p></li></ul><p>Common process steps:</p><p>Step 1. Seek input
+        to sound out perspectives before proposing action.</p><p>Step 2. Make a proposal
+        and seek advice - run an Advice proposal.</p><p>Step 3. Taking advice received
+        into account, you make a decision and inform the people who have given advice
+        - state an outcome.</p><p><a target="_blank" rel="noopener noreferrer nofollow"
+        href="https://help.loomio.com/en/guides/advice_process/index.html">Read more:
+        Advice process.</a></p>'
+      description: <h3 id="what-is-the-decision-you-need-to-make">What is the decision
+        you need to make?</h3><p></p><h3 id="why-is-this-important-and-what-impact-does-it-have">Why
+        is this important and what impact does it have?</h3><p></p><h3 id="what-advice-are-you-asking-to-help-you-make-a-good-decision">What
+        advice are you asking to help you make a good decision?</h3><p></p><h3 id="who-is-the-facilitator-for-this-process">Who
+        is the facilitator for this process?</h3><p></p>
+      advice: Advice
+    pass_a_resolution:
+      title_placeholder: Resolution to approve strategy
+      process_name: Pass a resolution
+      process_subtitle: Introduce resolution with context, background information, respond
+        to questions and raise a proposal to pass the resolution.
+      process_introduction: <p>Robert’s Rules is a framework that is comprised of a set
+        of codes and rules of ethics that helps groups hold orderly meetings that allow
+        the majority to rule while allowing minority voices to be heard. <a target="_blank"
+        rel="noopener noreferrer nofollow" href="https://www.boardeffect.com/blog/roberts-rules-of-order-cheat-sheet/">https://www.boardeffect.com/blog/roberts-rules-of-order-cheat-sheet/</a>
+        A member makes a motion to propose an action or make a decision by saying, “I
+        move to…”. Another member must second the motion by saying, “I second the motion.”
+        Once someone seconds the motion, the group votes on the motion. It passes by a
+        majority vote or a quorum depending on the rules in the bylaws.</p>
+      description: "<p><strong>State the resolution to be passed</strong></p><p></p><p><strong>Outline
+        context and background information</strong></p><p></p><p><strong>Invite members
+        to ask questions, make comments and contribute any information to build shared
+        understanding</strong></p><p></p>"
+      resolution: Resolution
+    decision_by_consensus:
+      title_placeholder: Revising our organization's constitution
+      process_name: Decision by consensus
+      process_subtitle: Reach collective agreement with everyone involved.
+      process_introduction: '<p>Build consensus for a decision you need to make together,
+        to reach an agreement that satisfies the needs and concerns of all participants.</p><p>Typical
+        roles:</p><ul><li><p>Appoint a facilitator.&nbsp; (In board meetings this is usually
+        the Chairperson.)</p></li><li><p>A quorum or supermajority of members to participate,
+        as specified in your organization''s statutes.</p></li></ul><p>Common process
+        steps:</p><p>Step 1. Create an open space for discussion about an issue or proposed
+        decision.</p><p>Step 2. Test for consensus and expose objections with a Sense
+        check proposal.&nbsp;</p><p>Step 3. Clarify any points, invite constructive modifications
+        and amend the proposal.</p><p>Step 4. Test for agreement and any remaining objections
+        with a Consensus proposal.</p><p>Step 5. Record the decision with an outcome and
+        in the official minutes of the organization.</p><p><a target="_blank" rel="noopener
+        noreferrer nofollow" href="https://help.loomio.com/en/guides/consensus_process/index.html">Read
+        more: Consensus process.</a></p>'
+      description: <h3 id="what-is-the-decision-you-need-to-make">What is the decision
+        you need to make?</h3><p></p><h3 id="why-is-this-important-and-what-impact-does-it-have">Why
+        is this important and what impact does it have?</h3><p></p><h3 id="what-information-do-people-need-for-context">What
+        information do people need for context?</h3><p></p><h3 id="who-is-the-facilitator">Who
+        is the facilitator?</h3><p></p><h3 id="what-conditions-need-to-be-met-for-a-decision">What
+        conditions need to be met for a decision?</h3><h3 id=""></h3>
+      consensus: Consensus
+    share_links_and_info:
+      title_placeholder: Share links and info
+      process_name: Share links and info
+      process_subtitle: Post info, links and reports to share for comment and discussion.
+      process_introduction: "<p>Use a thread as a 'wall' or 'bulletin board'
+        for your group to post information, news items and ideas you'd like to share with
+        each other.</p><p>Invite people to use the <strong>Insert link</strong> and <strong>Embed
+        video</strong> formatting tools to help the group access info from within Loomio.
+        Use a <strong>Heading</strong> on comments to pin the comment to the thread timeline,
+        so it can be easily found.</p><p><strong>Pin</strong> the thread so that it sticks
+        around, and encourage <strong>Reactions</strong> to keep it energized, letting
+        people know you saw their item.</p><p>The default display of this thread is <strong>Newest</strong>
+        so the most recent comments are at the top of the thread.</p>"
+      description: <p>Use this thread to post info, notices and things you'd like to share
+        - a place where you can see what is going on and get involved.</p><p data-text-align="start">Share
+        events, reports, podcasts and other interesting online info.</p><p data-text-align="start">Use
+        the <strong>Insert link</strong> and <strong>Embed video</strong> formatting tools
+        to help people access info within Loomio.</p>
+      information: Information
+    prepare_for_a_meeting:
+      title_placeholder: Preparing for our next meeting
+      process_name: Prepare for a meeting
+      process_subtitle: Build an agenda, post board papers and organize administrative
+        matters so everyone is up to date, in context and prepared.
+      description: <p><strong>Focus of the meeting</strong></p><p></p><p data-text-align="start"><strong>Outline agenda</strong></p><p data-text-align="start"></p><p data-text-align="start"><strong>Actions from last meeting</strong></p><p data-text-align="start"></p><p data-text-align="start"><strong>How should participants prepare for the meeting?</strong></p><p data-text-align="start"></p><p data-text-align="start"><strong>List of documents for the meeting</strong></p><p data-text-align="start"></p>
+      process_introduction: <p>Plan an effective meeting by involving people from the outset,
+        aligning towards the most important topics, and make better use of your precious time together.</p>
+        <p>Use a thread as the container for your meeting to establish a focus for the meeting, set the agenda,
+        find a suitable date, post key documents and reports, start discussion on agenda items, follow up with
+        actions and minutes.</p><p>This helps everyone prepare for the meeting, by reading the materials and
+        thinking about topics of discussion and the decisions to be made.
+        Members are then more likely to arrive in context and ready for the meeting.</p>
+        <p>Read more about <a target="_blank" rel="noopener noreferrer nofollow" href="https://help.loomio.com/en/guides/board_processes/meeting.html"><u>Preparing for a meeting</u></a> in the Good Governance Guide to Loomio.</p>
+      meeting: Meeting
+    build_a_policy:
+      title_placeholder: Revising our hiring policy
+      process_name: Build a policy
+      process_subtitle: Work with your team to build and agree a policy or procedure document.
+      process_introduction: "<p><span>The thread is the container for discussion about
+        the policy, where you can agree requirements and principles, and post document
+        drafts for comment.</span></p><p><span>Use the template to develop policy with
+        a small group of people, or make it transparent to the whole organization, inviting
+        comments on progressive versions of the document.</span></p><p><span>Use a Sense
+        check proposal to notify group members that a draft document is ready for review,
+        and invite people to read the document and respond with any comments or questions.</span></p><p><span>When
+        a 'final' draft is ready, raise a Consent or Consensus proposal to approve the
+        document.</span></p>"
+      description: "<p><strong><span>What is the policy or document you need to build?</span></strong></p><p></p><p><strong><span>Why
+        is this important?</span></strong></p><p></p><p><strong><span>What are you asking
+        people to do?</span></strong></p><p></p>"
+      policy: Policy
+    elect_a_governance_position:
+      title_placeholder: Council nomination and election
+      process_name: Elect a governance position
+      process_subtitle: Nominate and elect someone to a governance role in council, committee or board.
+      process_introduction: "<p>Introduce the governance role and criteria for the position
+        to help members assess candidates.</p><p>Call for nominations with an Opt-in poll.
+        Invite nominees to post a photo of the candidate along with their bio and references.
+        Embed a video message from the candidate so members can see and hear directly
+        from the candidate.</p><p>If you are ready to elect a candidate use a Consent
+        proposal.</p><p>If you have several candidates for a position, use Ranked Choice
+        proposal where voters can rank candidates in order of preference.</p>"
+      description: '<h3 id="what-position-do-you-need-to-fill">What position do you need
+        to fill?</h3><p></p><h3 id="why-is-this-important">Why is this important?</h3><p></p><h3
+        id="what-qualifications-skills-and-experiences-make-a-good-cand">What qualifications,
+        skills and experiences make a good candidate?</h3><p></p><h3 id="what-is-the-election-process">What
+        is the election process?</h3><p>Stage 1: Nominations - we are inviting nominations
+        for suitable candidates.</p><p>Stage 2: Introduce candidates - include a photo,
+        short bio and reference for each candidate.</p><p>Stage 3: Election - vote to
+        appoint a candidate to the role.</p>'
+      election: Election
+    funding_decision:
+      title_placeholder: Funding application for the Robotics Roadshow
+      process_name: Funding decision
+      process_subtitle: Process a grant, loan or investment application and make a funding decision.
+      process_introduction: "<p>Introduce an application for funding, attach documents
+        and other supporting materials.</p><p>Summarize the application in the thread
+        context.</p><p>Invite authorized people to review the application and ask questions.
+        Allow sufficient time for discussion.</p><p>Raise a Consensus proposal to approve
+        the funding.</p><p>If someone disagrees, ask for a reason - for example, more
+        information may be needed. Invite the person disagreeing to change their vote
+        when satisfied.</p><p>When you have a clear decision about the funding application,
+        state an outcome to record the decision.</p>"
+      description: <h3 id="introduce-and-summarize-the-funding-application">Introduce
+        and summarize the funding application</h3><p></p><h3 id="how-does-this-application-fit-with-funding-criteria">How
+        does this application fit with funding criteria?</h3><p></p><h3 id="who-is-authorized-to-approve-this-funding-decision">Who
+        is authorized to approve this funding decision?</h3><p></p><h3 id="invite-questions-from-decision-makers-to-process-the-applica">Invite
+        questions from decision-makers to process the application</h3><p></p>
+      funding: Funding
+    approve_a_document:
+      title_placeholder: Developing our brand strategy
+      process_name: Approve a document
+      process_subtitle: Introduce, discuss and develop an important document, policy or agreement.
+      process_introduction: "<p>Introduce the document along with any background information.
+        State the purpose of the document to help stay focused.</p><p>Invite people to
+        contribute information and their expertise, and use this to frame the document.
+        Acknowledge and consider feedback and contributions from people.</p><p>Integrate
+        contributions into a first draft of the document and successive drafts until it
+        is ready to be approved.</p><p>Use a Sense check poll to survey opinions and clarify
+        any issues with the draft.</p><p>Once feedback is considered and incorporated
+        into the document, proceed to approval or agreement with a Consent or Consensus
+        proposal.</p><p>The thread becomes a clear record of document creation progress
+        and decisions made.</p>"
+      description: <h3 id="what-is-the-purpose-of-the-document">What is the purpose of
+        the document?</h3><p></p><h3 id="why-is-this-important">Why is this important?</h3><p></p><h3
+        id="what-are-you-asking-people-to-do">What are you asking people to do?</h3><p></p>
+      document: Document
+
   explore:
     header: Explore public groups
 
-  saml_providers:
-    invitation_created:
-      success: "Success! Please check your %{email} inbox for a link to join %{group_name}."
-      error: "Your SAML provider could not authenticate %{email} for %{group_name}."
   activerecord:
     errors:
       messages:
         blank: can't be blank
         invalid: is not a valid value
 
+  unauthorized:
+    manage:
+      all: "Not authorized to %{action} %{subject}."
+    add_guests:
+      all: "You must upgrade your Loomio subscription to add guests to your %{subject}. Alternatively, you can invite them to be members of your group."
   errors:
     clear_cache: "Loading problem detected. Hold shift and press reload, or clear your browser cache."
     400:
       title: Bad request
       body: Sorry, we weren't able to understand that request
+    401:
+      title: Unauthorized
+      body: You are not permitted to access this page. You may need to sign in.
     403:
       title: Forbidden
       body: You are not permitted to access this page. You may need to sign in.
@@ -49,10 +288,12 @@ en:
     messages:
       email: not a valid email address
       spoofed_media_type: The contents of that file don't match its filename
+      pwned_password: This password has previously appeared in a data breach and should never be used
 
   group:
     error:
       handle_must_begin_with_parent_handle: "Must begin with %{parent_handle}-"
+      no_public_trials: "Please upgrade from trial to change the group privacy setting"
     stats:
       group_stats: Group stats
       org_stats: Organisation stats (including subgroups)
@@ -64,7 +305,6 @@ en:
       votes: Votes
       comments: Comments
       general: General
-      polls: Polls
       poll_types:
         proposal: Proposal
         count: Count
@@ -79,25 +319,25 @@ en:
     placeholder_name: "Invited user (%{hostname})"
     error:
       sign_in_required_html: |
-       You must be signed in to proceed.
-       Please <a href="/dashboard" target="_blank">sign in</a> then reload this page to continue.
+        You must be signed in to proceed.
+        Please <a href="/dashboard" target="_blank">sign in</a> then reload this page to continue.
       recaptcha: "We weren't able to verify that you're not a robot. Please try again!"
       bad_login: "Sorry, that password doesn't match the one we have on file"
       username_must_be_alphanumeric: "Usernames must be lower case letters and numbers only"
-
-  attachment:
-    error:
-      too_large: The file you tried to attach is larger than 100 Megabytes, please choose a smaller file.
 
   poll:
     error:
       cannot_add_options: Cannot add options to this poll
       cannot_remove_options: Cannot remove options from this poll
       must_have_options: Must have at least one poll option
+      must_be_in_the_future: Must be in the future
+      templates_cannot_close: Templates cannot close
     export:
       percent_voted: "%{num}/%{denom} (%{percent}) members have stated their position"
       title: Title
       author: Author
+      email: Email
+      user_id: User ID
       created_at: Created At
       closing_at: Closing At
       closed_at: Closed At
@@ -116,6 +356,8 @@ en:
       participant: Participant
       also_available: Also available in
       total: Total
+    waiting_for_votes_from: "Waiting for votes from"
+
   stance:
     error:
       too_short: Please make a selection
@@ -124,38 +366,33 @@ en:
     invitation_cancelled: Sorry, this invitation has been revoked by the group cooordinator. Please request another invitation from your group.
     invitation_already_used: This invitation has already been used. Please sign in to loomio directly to continue to your group.
 
-  date:
-    formats:
-      for_this_year: "%e %b"
-      for_another_year: "%-d/%-m/%y"
-  time:
-    formats:
-      closing_soon_subject: "%d %b %H:%M"
-      for_today: "%l:%M %P"
-
-  validate:
-    motion:
-      must_close_in_future: Proposal must close in the future.
-      one_at_a_time: There is another active proposal.
-
   subscriptions:
     active: Active
     inactive: Inactive
 
   base_mailer:
-    via_loomio: '%{name} (via %{site_name})'
+    via_loomio: "%{name} (via %{site_name})"
+
+  event_mailer:
+    received_email:
+      explaination_html: |
+        <p>You are receiving this email because you are an admin for the Loomio group: %{group}.</p>
+        <p>The group has received an email from an unrecognised email address.</p>
+        <p>If the message is from a member of the group, please review the email and select the member.</p>
+        <p>If the message is unwanted, you can block any further email from that address.</p>
+
   user_mailer:
     group_export_ready:
       subject: Group data export for %{group_name}
       body_html: |
         Download your group data <a href="%{url}">here</a>. Please note that this link will expire in one week's time.
 
-    deactivated:
-      subject: "Your %{site_name} user account has been deactivated."
+    redacted:
+      subject: "Your %{site_name} user account has been deleted"
       body_html: |
-        <p>You, or someone with access to your account, has deactivated your Loomio user account.</p>
-        <p>All personal data has been removed from the system.</p>
-        <p>If you wish to recover this user account and associated comments and votes, please contact support and reference: %{recovery_code}</p>
+        <p>Your %{site_name} user account has been deleted.</p>
+        <p>All personally identifying data has been removed.</p>
+        <p>If you did not request this, please contact %{support_email}</p>
 
     accounts_merged:
       subject: "Your %{site_name} user accounts have been merged."
@@ -188,22 +425,23 @@ en:
   email:
     common:
       or_enter_code: Or, enter the code below
-      resend: This link will expire in 24 hours and can only be used once.
+      resend: This will expire in 24 hours and can only be used once
 
     login:
       subject: Sign in to %{site_name}
-      intro: Hi %{name}, here is a link to sign in to your %{site_name} account.
+      intro: This is your link to sign in to %{site_name}
+      intro_code: This is your code to sign in to %{site_name}
       login: Sign in as %{name}
 
     reactivate:
       subject: Reactivate your %{site_name} account
-      intro: Hi %{name}, here is a link to reactivate your %{site_name} account.
+      intro: Hi %{name}, here is a link to reactivate your %{site_name} account
       login: Reactivate %{name}
 
     contact_request:
-       subject: "%{name} would like to connect with you on %{site_name}!"
-       intro: "%{name} (%{email}) has sent you a request to connect."
-       footer: "You may respond to %{name} directly by replying to this email."
+      subject: "%{name} would like to connect with you on %{site_name}!"
+      intro: "%{name} (%{email}) has sent you a request to connect."
+      footer: "You may respond to %{name} directly by replying to this email."
 
     reset_password:
       greeting: |
@@ -215,23 +453,10 @@ en:
         However, your password will not be changed until you follow the link above and complete the form.
         If you continue to have problems logging in, reply to this email to contact a support person.
 
-    start_decision:
-      subject: Start a decision on Loomio
-      intro: Hello, <strong>%{name}</strong>!
-      action: What would you like to do?
-      proposal: Raise a proposal
-      count: Start a check
-      poll: Start a poll
-      dot_vote: Start a dot vote
-      meeting: Schedule a time
-      ranked_choice: Start a ranked choice
-
-    custom: "%{text}"
-    group_email:
-      intro: "%{who} made an announcement to %{group}:"
     by_who: by %{person}
     reply_to_this_discussion: Reply to this discussion
-    value_proposition: "%{site_name} is a place for groups to make decisions together"
+    loomio_app_description: "An easy to use, secure place for organizations to make decisions together."
+
     view_group: View group
     to_join_group:
       subject: "%{member} has invited you to join %{group_name} on %{site_name}"
@@ -240,6 +465,7 @@ en:
       link_help: "Click the link below to accept the invitation:"
       accept_invitation: "Accept invitation"
       stop_emails: "Stop receiving emails from %{site_name}"
+      accepting_is_important: It's important to accept your invitation, so that you do not miss notifications about decisions that involve you.
     resend_to_join_group:
       subject: "%{member} is waiting for you to join %{group_name} on %{site_name}"
     user_added_to_group:
@@ -247,11 +473,12 @@ en:
       content: "%{who} has added you to %{which_group}."
       content_html: "<strong>%{who}</strong> has added you to <strong>%{which_group}</strong>."
       link_help: "Click the link below to go to the group:"
-    unsubscribe: 'Unsubscribe or change your email preferences:'
+    unsubscribe: "Unsubscribe or change your email preferences:"
     unsubscribe_html: "<a href='%{link_path}'>%{link_text}</a> to unsubscribe or change your email preferences."
     catch_up:
       daily_subject: Yesterday on %{site_name}
       weekly_subject: Last week on %{site_name}
+      other_subject: Recently on %{site_name}
       do_not_reply: Please do not reply to this email.
       mark_as_read: Mark as read
       thanks_for_reading: Thanks for reading, have a great day!
@@ -277,45 +504,17 @@ en:
     unfollowed_discussion: You have turned off emails for the thread.
 
   discussion_mailer:
-    resend: 'REMINDER: %{actor} is waiting for you to join %{discussion}'
-
-    new_discussion:
-      subject: "%{discussion}"
-      subject_html: "<strong>%{actor}</strong> started a thread: %{discussion}"
-
-    discussion_edited:
-      subject: "%{discussion}"
-      inline:  "%{actor} edited the thread"
-      subject_html: "<strong>%{actor}</strong> edited the thread: %{discussion}"
-
-    discussion_announced:
-      subject: "%{discussion}"
-      subject_html: "<strong>%{actor}</strong> invited you to join: %{discussion}"
-
-    discussion_closed:
-      inline: "%{actor} closed the thread"
-
-    new_comment:
-      subject: "%{discussion}"
-      subject_html: "<strong>%{actor}</strong> commented in: %{discussion}"
-
-    comment_replied_to:
-      subject: '%{actor} replied to you in: %{discussion}'
-      subject_html: '<strong>%{actor}</strong> replied to you in: %{discussion}'
-
-    user_mentioned:
-      subject: '%{actor} mentioned you in: %{discussion}'
-      subject_html: "<strong>%{actor}</strong> mentioned you in %{discussion}"
-
-    reply_or_view_online_html: Reply to this email directly or <a href='%{url}'>view it on %{hostname}</a>.
+    reply_or_view_online_html: "Reply to this email directly or <a href='%{url}'>view it on %{hostname}</a>."
     turn_off_notifications_html: "<a href='%{url}'>Turn off emails</a> for this discussion."
     change_email_preferences_html: "Change your <a href='%{email_preferences_url}'>email preferences</a>."
     unsubscribe_from_discussion_announced_html: "<a href='%{url}'>Unsubscribe</a> from further announcements in this thread."
     unsubscribe_from_new_comment_html: "<a href='%{url}'>Unsubscribe</a> from comments in this thread."
     unsubscribe_from_comment_replied_to_html: "This is a reply notification."
     unsubscribe_from_user_mentioned_html: "This is a mention notification."
-
-
+    discussion_edited:
+      inline: "%{actor} edited the thread context"
+    discussion_closed:
+      inline: "%{actor} closed the thread"
 
   footer:
     about: About
@@ -327,12 +526,6 @@ en:
     public_groups: Public groups
     terms: Terms
     independent_install_html: '%{hostname} is running an independent copy of Loomio: <a href="http://github.com/loomio/loomio">find out more</a>.'
-
-  invitation_form:
-    error:
-      too_many_pending: "You have more than the maximum %{count} pending invitations for this group"
-      too_many_cancelled: "You have more than the maximum %{count} cancelled invitations for this group"
-      all_email_addresses_belong_to_members: "These people are already members of the group."
 
   password_reset:
     change_your_password: Change your password
@@ -346,273 +539,38 @@ en:
     length_restriction: Passwords must be at least 8 characters long.
     forbidden_passwords: Common passwords such as “password” are forbidden to keep your account safe.
 
-  introduction_thread:
-    title: Welcome! Please introduce yourself
-    description: |
-      Take a moment to let the group know a bit about who you are. Post a comment below.
-
-      What’s your role or approach to participation in this group? What should people know about you to understand where you’re coming from?
-
-  how_it_works_thread:
-    title: How to use Loomio
-    description: |
-      Welcome to Loomio, an online place for communicating and making decisions.
-
-      This is an example discussion **thread**. You can add comments below. Threads are for discussing topics and getting clear outcomes. This thread is about how Loomio works, so post questions about that here.
-
-      You are currently reading the thread **context**, which can be kept up to date with key information and questions that help people engage.
-
-      To get started with Loomio:
-      <ul>
-        <li>Try commenting in an existing thread, or this one.</li>
-      </ul>
-      Tips for posting on Loomio:
-      <ul>
-        <li>To notify a specific person, type @ followed by their name</li>
-        <li>Drag and drop pictures and attachments or click the paperclip icon</li>
-        <li>See <a href="https://help.loomio.org/en/guides/5_ways_to_use_threads/" target="_blank">5 ways to use threads</a> for some ideas and tips</li>
-      </ul>
-
-      If you have any questions, see [Loomio Help](http://help.loomio.org).
-
-  first_proposal:
-    name: Have any questions about using Loomio?
-    description: |
-      _If yes, share your question. If no, you’re ready to comment in your group’s threads!_
-
-      This **Check poll** is asking whether you or anyone here has any questions about using Loomio.
-
-      <ul><li>Go ahead and try it using the buttons and text field below.</li></ul>
-
-      As with any decision or facilitation tool, you will need to respond before it closes.
-
-      You can change your position while it is open (perhaps responding to new info).
-
-      **Try participating! Click one of the buttons.**
-
-  markdown:
-    intro:
-      title: |
-        # What is markdown?
-
-      body: |
-        Markdown is a way of writing plain text (left),
-        so that it can be converted to rich text (right).
-
-        This page is written in markdown to show how it works.
-
-    headers:
-      body: |
-        ## Headings
-
-        Prefix with a hash and a space to turn text into a heading.
-
-        # This is an h1
-        ## This is an h2
-        #### This is an h4
-
-    paragraphs:
-      title: |
-        ## Paragraphs
-
-      body: |
-        You need
-        to put a
-        blank line
-        in between lines.
-
-        Or it will end up as one big paragraph!
-
-    emphasis:
-      title: |
-        ## Emphasis
-
-      body: |
-        You can italicize a word with _underscore_ or *star*.
-
-        __Bold__ a word by doubling the **emphasis**.
-
-    lists:
-      title: |
-        ## Lists
-
-      body: |
-        Here's how to make a list:
-
-        * leave a blank line before your list
-        * use stars (*)
-        * leave a space after the star
-
-    links:
-      title: |
-        ## Links and Images
-
-      body: |
-        Square brackets with title, round brackets with URL. No spaces between the brackets.
-
-        [Loomio Homepage](https://www.loomio.org/)
-
-        Images are the same, but prefixed with an exclamation mark. Title is used as alt text.
-
-        ![loomio logo](https://i.imgur.com/Fvtworb.png)
+  task_mailer:
+    task_due_reminder:
+      subject: "Task reminder: %{name}"
+      greeting: "Hi %{name}, the following task is due %{due}:"
+      view_task: "View on %{site_name}"
+      update_or_comment: "If you have already completed this task, please tick it off. If it is not complete, please share a progress update."
+      due_today: "today"
+      due_in_count_days: "in %{count} days"
 
   group_mailer:
-    resend: 'REMINDER: %{member} is waiting for you to join %{group_name}'
+    resend: "REMINDER: %{member} is waiting for you to join %{group_name}"
+    destroy_warning:
+      subject: Your Loomio group is scheduled for deletion.
+      body: |
+        Your Loomio group: "%{group}" has been scheduled for deletion by %{deletor}.
+        If you do not want your group to be deleted, please reply to this email.
+        If you're sure you want to delete the group, you do not need to do anything.
+        Thank you.
 
   poll_mailer:
-    resend: '%{actor} is reminding you to vote in: %{title}'
     common:
-      or: or
       why_send_this: You are receiving this email because %{reason}
       view_on_loomio: View it on %{site_name}
-      unsubscribe: Unsubscribe
-      results: Results
-      responses: Responses
-      change_your_stance: Change
       create_outcome: Share outcome
       your_response: "You voted:"
+      you_voted: "You voted!"
+      not_invited: "Not invited"
       please_respond: Please respond
       time_zone: (Times displayed in %{zone})
       undecided_members: Undecided Members (%{count})
       undecided_visitors: Undecided Guests (%{count})
       more_undecided: "%{count} more..."
       vote_now: Vote now
-      verify_stance_for_unverified_user: "Thanks for voting in %{title}. Please verify your email address, so we can send you the results when they're ready."
-      verify_stance_for_verified_user: "It looks like you voted in %{title}. If this was you, please click the link below to confirm your vote."
       you_have_until: You have until %{when} to participate.
-      people_have_voted: "%{num} people have voted (%{pct}%)"
-
-    subject:
-      poll_created: '%{actor} started a %{poll_type}: %{title}'
-      poll_edited: '%{actor} edited the %{poll_type}: %{title}'
-      poll_reminder: '%{actor} is reminding you to vote: %{title}'
-      poll_announced: '%{actor} invited you to vote in a %{poll_type}: %{title}'
-      poll_announced_wip: '%{actor} shared a work in progress %{poll_type}: %{title}'
-      poll_closing_soon: '%{poll_type} closing in 24 hours: %{title}'
-      poll_closing_soon_author: 'Your %{poll_type} closes in 24 hours: %{title}'
-      poll_expired: "%{poll_type} closed: %{title}"
-      poll_expired_author: 'Your %{poll_type} has closed. Share an outcome for: %{title}'
-      poll_option_added: '%{actor} added options to: %{title}'
-      poll_option_added_author: '%{actor} added options to: %{title}'
-      outcome_created: '%{actor} shared a %{poll_type} outcome: %{title}'
-      outcome_updated: '%{actor} updated the %{poll_type} outcome: %{title}'
-      outcome_created_author: 'You shared a %{poll_type} outcome: %{title}'
-      outcome_review_due: "It's time to review the %{poll_type} outcome: %{title}"
-      outcome_announced: '%{actor} shared a %{poll_type} outcome: %{title}'
-      stance_created: "%{actor} voted on: %{title}"
-      stance_created_author: "Please verify your vote on: %{title}"
-      user_mentioned: '%{actor} mentioned you in: %{title}'
-      user_reminded: '%{actor} is reminding you to vote in: %{title}'
-
-    header:
-      poll_created: '<strong>%{actor}</strong> started a %{poll_type}'
-      poll_edited: '<strong>%{actor}</strong> edited a %{poll_type}'
-      poll_reminder: '<strong>%{actor}</strong> is reminding you to vote'
-      poll_announced: '<strong>%{actor}</strong> invited you to vote in a %{poll_type}'
-      poll_announced_wip: '<strong>%{actor}</strong> shared a work in progress %{poll_type}'
-      poll_closing_soon: '<strong>%{actor}</strong>''s %{poll_type} is closing in 24 hours. Now is a good time to vote, change your mind or encourage others to participate.'
-      poll_closing_soon_author: 'Your %{poll_type} is closing in 24 hours - now is a great time to remind people about it or extend the deadline if necessary.'
-      poll_expired: "<strong>%{actor}'s</strong> %{poll_type} has closed: %{title}"
-      poll_expired_author: 'Your %{poll_type} has <strong>closed</strong>. Please take time to consider what as been said and <strong>share an outcome</strong> with the group, so people know what’ll happen next.'
-      poll_option_added: '<strong>%{actor}</strong> added options to: %{title}'
-      poll_option_added_author: '<strong>%{actor}</strong> added options to: %{title}'
-      outcome_created: '<strong>%{actor}</strong> shared a %{poll_type} outcome.'
-      outcome_updated: '<strong>%{actor}</strong> updated the %{poll_type} outcome.'
-      outcome_review_due: "It's time to review the %{poll_type} outcome: %{title}. Consider starting a feedback poll or a new thread inviting reflections on how the decision has been implemented."
-      outcome_created_author: 'You shared a %{poll_type} outcome.'
-      outcome_announced: '<strong>%{actor}</strong> shared a %{poll_type} outcome.'
-      stance_created: "<strong>%{actor}</strong> voted on: %{title}"
-      user_mentioned: '<strong>%{actor}</strong> mentioned you in: %{title}'
-      user_reminded: '<strong>%{actor}</strong> is reminding you to vote in: %{title}'
-
-    body:
-      voted: '<strong>%{participant}</strong>:'
-
-  comment_by: Comment by %{comment_author}
-
-  notified:
-    no_matches_found: "No results found matching '%{query}'"
-    group_users: "(%{count} people)"
-    group_title: "%{name} (%{count} people)"
-    public_title: Public (Anyone with link)
-
-  poll_unsubscribe:
-    title: You have been unsubscribed from %{title}
-    helptext: You will no longer receive emails about this decision.
-    visit_poll: View poll
-    go_to_dashboad: Go to dashboard
-
-  microsoft:
-    section_title: "[%{title}](%{url})"
-    new_discussion: "New thread in %{group}"
-    new_comment: "New comment in %{group}"
-    outcome_created: "Outcome posted in %{group}"
-    outcome_updated: "Outcome updated in %{group}"
-    outcome_review_due: "Outcome review due in %{group}"
-    poll_created: "New %{poll_type} in %{group}"
-    stance_created: "New response to %{poll}"
-    poll_closing_soon: "%{poll_type} is closing in 24 hours"
-    poll_expired: "%{poll_type} has closed"
-    group_identity_created: "Events from %{group} will now appear in this channel"
-
-  webhook:
-    markdown:
-      new_discussion: "**%{actor}** started a discussion in %{group}: [%{title}](%{url})"
-      discussion_edited: "**%{actor}** edited a discussion in %{group}: [%{title}](%{url})"
-      new_comment: "**%{actor}** commented in [%{title}](%{url})"
-      outcome_created: "**%{actor}** shared an outcome of the %{poll_type}: [%{title}](%{url})"
-      outcome_update: "**%{actor}** edited the outcome of the %{poll_type}: [%{title}](%{url})"
-      outcome_review_due: "It's time to review the outcome of the %{poll_type}: [%{title}](%{url})"
-      poll_created: "**%{actor}** started a %{poll_type} in %{group}: [%{title}](%{url})"
-      poll_edited: "**%{actor}** edited a %{poll_type} in %{group}: [%{title}](%{url})"
-      stance_created: "**%{actor}** voted in [%{title}](%{url})"
-      poll_closing_soon: "24 hours remaining: [%{title}](%{url})"
-      poll_expired: "%{poll_type}: [%{title}](%{url}) has closed"
-      poll_closed_by_user: "**%{actor}** closed the %{poll_type}: [%{title}](%{url})"
-      poll_reopened: "**%{actor}** reopened %{poll_type}: [%{title}](%{url})"
-
-  slack:
-    new_discussion: "New thread in *%{group}*: *%{discussion}*"
-    outcome_created: "Outcome posted in *%{group}*: *%{poll}*"
-    outcome_updated: "Outcome edited in *%{group}*: *%{poll}*"
-    outcome_review_due: "It's time to review the outcome of *%{group}*: *%{poll}*"
-    poll_created: "New *%{poll_type}* in *%{group}*: *%{poll}*"
-    poll_closing_soon: "Reminder: *%{poll}* is closing in 24 hours"
-    poll_expired: "*%{poll}* has closed"
-    poll_not_found: "Sorry, that poll was not found. Type '/loomio <poll_type> <title>' to start another one?"
-    unknown_channel: |
-      Sorry, it looks like there's not a loomio group associated with this channel.
-      Try running '/loomio' in one of the following channels instead?
-      %{integrations}
-    stance_not_valid: "Sorry, we weren't able to create a stance for *%{poll}*. <%{url}|Click here> to vote on the poll directly."
-    group_identity_created: |
-      Hello, I'm Loomio Bot! *%{author}* added me.
-      I'll tell you whenever there are new threads or polls within *%{group}*
-
-      If you haven't joined *%{group}* yet, <%{url}|Click here> to do so.
-    request_authorization_message: "Just one more step: <%{url}|Click here> to authorize your slack account to use Loomio. (You'll only have to do this once)"
-    poll_closed: "*%{title}* has closed already! <%{url}|Click here> to view the results."
-    go_to_slack: Go to Slack
-    stance_created: Thanks for participating! You voted *%{position}* on the poll <%{poll_url}|%{title}>. If you''d like to change your vote, or give a reason for why you feel this way, <%{stance_url}|click here>.
-    click_to_vote: "Select an option below to vote:"
-    time_zone_message: (all times are in the %{zone} time zone)
-    authorized_message: Success! You're all set up to vote on slack now.
-    initiate: |
-      Okay, let's do this! <%{url}|Click here to start your %{type}>.
-      (note: we'll post into this channel once it's created, so that everyone can participate)
-    slash_command_help: |
-      Just enter a decision type and a question, and we'll take it from there.
-      You can choose from the following decision types:
-      'proposal': Seek collective agreement
-      'count':      Track participation and find volunteers
-      'poll':         Measure popularity of options
-      'dot_vote': Prioritise a list of options
-      'meeting': Find a time to meet
-      Or, start a conversation with '/loomio thread <title>'.
-
-      For example:
-      /loomio count Who's coming to the party on Sunday?
-      In order to start a new count.
-      or
-      /loomio thread Let's talk about the company direction
-      To start a new thread
+      people_have_voted: "%{nom} of %{dnom} people have participated (%{pct}%)"

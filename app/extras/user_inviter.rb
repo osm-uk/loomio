@@ -1,18 +1,53 @@
 class UserInviter
-  def self.count(emails: , user_ids:, audience:, model:, usernames: , actor:, exclude_members: false, include_actor: false)
+  def self.count(emails: , user_ids:, chatbot_ids:, audience:, model:, usernames: , actor:, exclude_members: false, include_actor: false)
     emails = Array(emails).map(&:presence).compact.uniq
     user_ids = Array(user_ids).uniq.compact.map(&:to_i)
+    chatbot_ids = Array(chatbot_ids).uniq.compact.map(&:to_i)
     usernames =  Array(usernames).map(&:presence).compact.uniq
 
     audience_ids = AnnouncementService.audience_users(
       model, audience, actor, exclude_members, include_actor).pluck(:id)
     email_count = emails.count - User.where(email: emails).count
-    users = User.where('email in (:emails) or id in (:user_ids) or username IN (:usernames)',
+    users = User.active.where('email in (:emails) or id in (:user_ids) or username IN (:usernames)',
                         emails: emails,
                         usernames: usernames,
                         user_ids: user_ids.concat(audience_ids))
-    users = users.where.not(id: model.voters.pluck(:id)) if exclude_members
-    email_count + users.count
+    users = users.where.not(id: model.voter_ids) if exclude_members
+    email_count + users.count + chatbot_ids.length
+  end
+
+  def self.authorize_add_members!(parent_group:, group_ids:, emails:, user_ids:, actor: )
+    subscription = Subscription.for(parent_group)
+
+    raise Subscription::NotActive unless subscription.is_active?
+
+    # authorize ability to add members to selected groups
+    Group.where(id: group_ids).each do |g|
+      actor.ability.authorize!(:add_members, g)
+    end
+    
+    return if subscription.max_members.nil?
+
+    # check if org_memberships_count + new_member_count will exceed subscription.max_members
+    new_emails_count =
+      emails.uniq.count -
+      Membership.active.where(
+        group_id: group_ids,
+        user_id: User.where(email: emails).pluck(:id),
+      ).count
+
+    new_user_ids_count =
+      user_ids.uniq.count -
+      Membership.active.where(
+        group_id: group_ids,
+        user_id: user_ids,
+      ).count
+
+    new_user_count = new_emails_count + new_user_ids_count
+
+    if (parent_group.org_memberships_count + new_user_count) > parent_group.subscription.max_members.to_i
+      raise Subscription::MaxMembersExceeded
+    end
   end
 
   def self.authorize!(emails: , user_ids:, audience:, model:, actor:)
@@ -23,6 +58,9 @@ class UserInviter
 
     # members belong to group
     member_ids = model.members.where(id: user_ids).pluck(:id)
+    member_ids += model.members.where(email: emails).pluck(:id)
+
+    emails -= User.where(email: emails, id: member_ids).pluck(:email)
 
     # guests are outside of the group, but allowed to be referenced by user query
     guest_ids = UserQuery.invitable_user_ids(model: model, actor: actor, user_ids: user_ids - member_ids)
@@ -48,7 +86,7 @@ class UserInviter
       []
     end
 
-    # guests are any user outside of the group
+    # guests are any user outside of the group, and not yet invited
     # either by email address or by user_id, but user_ids are limited to your org
     member_ids = model.members.where(id: user_ids).pluck(:id)
 
@@ -63,8 +101,13 @@ class UserInviter
                            inc: emails.length + ids.length,
                            per: :day)
 
+    wday = Date.today.wday
     User.import(safe_emails(emails).map do |email|
-      User.new(email: email, time_zone: actor.time_zone, detected_locale: actor.locale)
+      User.new(email: email,
+               time_zone: actor.time_zone,
+               date_time_pref: actor.date_time_pref,
+               detected_locale: actor.locale,
+               email_catch_up_day: wday)
     end, on_duplicate_key_ignore: true)
 
     User.active.where("id in (:ids) or email in (:emails)", ids: ids, emails: emails)
@@ -73,10 +116,6 @@ class UserInviter
   private
 
   def self.safe_emails(emails)
-    if ENV['SPAM_REGEX']
-      emails.uniq.reject {|email| Regexp.new(ENV['SPAM_REGEX']).match(email) }
-    else
-      emails.uniq
-    end
+    emails.uniq.reject {|email| NoSpam::SPAM_REGEX.match?(email) }
   end
 end

@@ -613,27 +613,6 @@ describe API::V1::DiscussionsController do
           expect(reader.has_read?(2)).to be true
           expect(response.status).to eq 200
         end
-        #
-        # it 'does not mark an inaccessible discussion as read' do
-        #   patch :mark_as_read, id: another_event.sequence_id
-        #   expect(response.status).to eq 403
-        #   expect(reader.reload.read_items_count).to eq 0
-        # end
-
-        # it 'responds with reader fields' do
-        #   # also testing accumulation
-        #   new_comment.discussion = discussion
-        #   CommentService.create(comment: new_comment, actor: user)
-        #   patch :mark_as_read, params: { id: discussion.id, ranges: "2-2" }
-        #   patch :mark_as_read, params: { id: discussion.id, ranges: "3-3" }
-        #   json = JSON.parse(response.body)
-        #   reader.reload
-        #
-        #   expect(json['discussions'][0]['id']).to eq discussion.id
-        #   expect(json['discussions'][0]['discussion_reader_id']).to eq reader.id
-        #   expect(json['discussions'][0]['read_ranges']).to eq [[2,3]]
-        #   # expect(json['discussions'][0]['read_items_count']).to eq 2
-        # end
       end
     end
 
@@ -688,15 +667,15 @@ describe API::V1::DiscussionsController do
         sign_in user
         discussion.group.add_admin! user
         post :pin, params: { id: discussion.id }
-        expect(discussion.reload.pinned).to eq true
+        expect(discussion.reload.pinned_at).to be_present
       end
 
       it 'allows admins to unpin a thread' do
         sign_in user
         discussion.group.add_admin! user
         discussion.update(pinned: true)
-        post :pin, params: { id: discussion.id }
-        expect(discussion.reload.pinned).to eq false
+        post :unpin, params: { id: discussion.id }
+        expect(discussion.reload.pinned_at).to be nil
       end
 
       it 'does not allow non-admins to pin a thread' do
@@ -707,97 +686,6 @@ describe API::V1::DiscussionsController do
 
       it 'does not allow logged out users to pin a thread' do
         post :pin, params: { id: discussion.id }
-        expect(response.status).to eq 403
-      end
-    end
-
-    describe 'fork' do
-      let(:user) { create :user }
-      let(:another_user) { create :user }
-      let(:group) { create :group }
-      let!(:discussion) { create_discussion group: group }
-      let(:target_event) { create :event, discussion: discussion, kind: :new_comment, eventable: create(:comment, discussion: discussion), sequence_id: 2 }
-      let(:another_event) { create :event, discussion: discussion, kind: :new_comment, eventable: create(:comment, discussion: discussion), sequence_id: 3 }
-      let(:alien_comment) { create(:comment) }
-      let!(:alien_comment_event) { CommentService.create(comment: alien_comment, actor: alien_comment.author ) }
-      let(:fork_params) {{
-        title: "A forked title",
-        group_id: group.id,
-        description: "A forked description",
-        private: true,
-        forked_event_ids: [target_event.id, another_event.id]
-      }}
-      let(:alien_fork_params) {{
-        title: "A forked title",
-        group_id: group.id,
-        description: "A forked description",
-        private: true,
-        forked_event_ids: [target_event.id, alien_comment_event.id, another_event.id]
-      }}
-
-      before { group.add_admin! user }
-
-      # it 'forks a thread' do
-      #   sign_in user
-      #   expect { post :fork, params: { discussion: fork_params } }.to change { Discussion.count }.by(1)
-      #   expect(response.status).to eq 200
-      #
-      #   new_discussion = Discussion.last
-      #   expect(new_discussion.items).to include target_event
-      #   expect(new_discussion.items).to include another_event
-      #   expect(new_discussion.items).not_to include alien_comment_event
-      #   expect(new_discussion.title).to eq fork_params[:title]
-      #
-      #   items = discussion.reload.items
-      #   expect(items).to_not include target_event
-      #   expect(items).to_not include another_event
-      #
-      #   expect(target_event.reload.eventable.discussion_id).to eq new_discussion.id
-      #   expect(another_event.reload.eventable.discussion_id).to eq new_discussion.id
-      #
-      #   forked_event = items.find_by(kind: :discussion_forked)
-      #   expect(forked_event).to be_present
-      #   expect(forked_event.sequence_id).to eq 2
-      # end
-      #
-      # it 'transfers read state from old discussion readers' do
-      #   event4 = create :event, discussion: discussion, kind: :new_comment, eventable: create(:comment, discussion: discussion), sequence_id: 4
-      #   event5 = create :event, discussion: discussion, kind: :new_comment, eventable: create(:comment, discussion: discussion), sequence_id: 5
-      #   event6 = create :event, discussion: discussion, kind: :new_comment, eventable: create(:comment, discussion: discussion), sequence_id: 6
-      #   reader = create :discussion_reader, discussion: discussion, user: user, read_ranges_string: '4-6'
-      #   another_reader = create :discussion_reader, discussion: discussion, user: another_user, read_ranges_string: '2-3,5-6'
-      #   fork_params[:forked_event_ids] = [target_event.id, event4.id, event5.id]
-      #
-      #   sign_in user
-      #
-      #   #the fork post creates a discussion and reports success, the fork is performed by the signed in user
-      #   expect { post :fork, params: { discussion: fork_params } }.to change { Discussion.count }.by(1)
-      #   expect(response.status).to eq 200
-      #
-      #   #the created discussion has two discussion readers (those created on the original discussion)
-      #   d = Discussion.last
-      #   # expect(d.discussion_readers.count).to eq 3
-      #
-      #   #the discussion reader is that of the user and its discussion is that which was made it has read ranges representing the entirety for the user
-      #   dr = DiscussionReader.find_by(user: user, discussion: d)
-      #   expect(dr).to be_present
-      #   expect(dr.read_ranges_string).to eq '2-2,4-5'
-      #
-      #   #the other user hadnt read event 4 so they should not have read it
-      #   dr2 = DiscussionReader.find_by(user: another_user, discussion: d)
-      #   expect(dr2).to be_present
-      #   expect(dr2.read_ranges_string).to eq '2-2,5-5'
-      # end
-
-      it 'does not allow non admins to fork a thread' do
-        sign_in another_user
-        post :fork, params: { discussion: fork_params }
-        expect(response.status).to eq 403
-      end
-
-      it 'does not move alien comment events' do
-        sign_in user
-        expect { post :fork, params: { discussion: alien_fork_params } }.to change { Discussion.count }.by(0)
         expect(response.status).to eq 403
       end
     end
@@ -852,7 +740,7 @@ describe API::V1::DiscussionsController do
         expect(first_comment_event.reload.depth).to eq 1
         expect(second_comment_event.reload.depth).to eq 2
 
-        expect(first_comment.reload.parent_id).to eq nil
+        expect(first_comment.reload.parent_id).to eq target_discussion.id
         expect(second_comment.reload.parent_id).to eq first_comment.id
 
         expect(first_comment_event.reload.position).to eq 1
@@ -882,8 +770,8 @@ describe API::V1::DiscussionsController do
         expect(first_comment_event.reload.depth).to eq 1
         expect(second_comment_event.reload.depth).to eq 1
 
-        expect(first_comment.reload.parent_id).to eq nil
-        expect(second_comment.reload.parent_id).to eq nil
+        expect(first_comment.reload.parent_id).to eq source_discussion.id
+        expect(second_comment.reload.parent_id).to eq target_discussion.id
 
         expect(first_comment_event.reload.position).to eq 1
         expect(second_comment_event.reload.position).to eq 1
@@ -913,8 +801,8 @@ describe API::V1::DiscussionsController do
         expect(first_comment_event.reload.depth).to eq 1
         expect(second_comment_event.reload.depth).to eq 1
 
-        expect(first_comment.reload.parent_id).to eq nil
-        expect(second_comment.reload.parent_id).to eq nil
+        expect(first_comment.reload.parent_id).to eq source_discussion.id
+        expect(second_comment.reload.parent_id).to eq target_discussion.id
 
         expect(existing_comment_event.reload.position).to eq 1
         expect(first_comment_event.reload.position).to eq 1
@@ -930,14 +818,19 @@ describe API::V1::DiscussionsController do
 
       describe 'move poll, stance, outcome' do
         let!(:poll)    { build(:poll, discussion: source_discussion, group: source_discussion.group)}
-        let!(:stance)  { build(:stance, poll: poll) }
         let!(:outcome) { build(:outcome, poll: poll) }
 
         let!(:poll_event) { PollService.create(poll: poll, actor: user) }
-        let!(:stance_event) { StanceService.create(stance: stance, actor: user) }
         let(:outcome_event) { OutcomeService.create(outcome: outcome, actor: user) }
 
         before do
+          # Stance.create!(participant: user, poll: poll, admin: true, reason_format: user.default_format)
+          stance = Stance.find_by!(poll: poll, participant: user)
+          params = {
+            stance_choices_attributes: [{poll_option_id: poll.poll_options.first.id}],
+            reason: "here is my stance"
+          }
+          @stance_event = StanceService.update(stance: stance, actor: user, params: params)
           poll.update(closed_at: Time.now)
           outcome_event
         end
@@ -947,7 +840,7 @@ describe API::V1::DiscussionsController do
           expect(response.status).to eq 200
 
           expect(target_discussion.reload.items).to include poll_event
-          expect(target_discussion.reload.items).to include stance_event
+          expect(target_discussion.reload.items).to include @stance_event
           expect(target_discussion.reload.items).to include outcome_event
 
           expect(poll_event.reload.eventable.discussion_id).to eq target_discussion.id
@@ -955,7 +848,7 @@ describe API::V1::DiscussionsController do
           expect(poll_event.reload.parent_id).to eq target_discussion.created_event.id
 
           expect(poll_event.reload.depth).to eq 1
-          expect(stance_event.reload.depth).to eq 2
+          expect(@stance_event.reload.depth).to eq 2
           expect(outcome_event.reload.depth).to eq 2
         end
       end
@@ -973,15 +866,6 @@ describe API::V1::DiscussionsController do
       it 'access denied for moving comments where you are not an admin of the target discussion' do
         patch :move_comments, params: { id: alien_comment_event.discussion_id, forked_event_ids: [first_comment_event.id]}
         expect(response.status).to eq 403
-      end
-    end
-
-    describe 'search' do
-      it 'does not return discarded discussions' do
-        get :search, params: { group_id: group.id, q: "Discarded" }
-        json = JSON.parse(response.body)
-        discussion_ids = json['discussions'].map { |d| d['id'] }
-        expect(discussion_ids).to_not include discarded_discussion.id
       end
     end
   end

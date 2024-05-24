@@ -1,6 +1,4 @@
 ActiveAdmin.register Group, as: 'Group' do
-  includes :group_survey
-
   controller do
     def permitted_params
       params.permit!
@@ -11,7 +9,7 @@ ActiveAdmin.register Group, as: 'Group' do
     end
   end
 
-  actions :index, :show, :new, :edit, :update, :create
+  actions :index, :show, :new, :edit, :create
 
   filter :name
   filter :handle, as: :string
@@ -20,14 +18,24 @@ ActiveAdmin.register Group, as: 'Group' do
   filter :created_at
 
   scope :parents_only
+  scope :not_demo
+
+  member_action :update, :method => :put do
+    group = Group.find(params[:id])
+    group.assign_attributes_and_files(permitted_params[:group])
+    privacy_change = GroupService::PrivacyChange.new(group)
+    group.save!
+    privacy_change.commit!
+    redirect_to admin_groups_path, :notice => "Group updated"
+  end
+
 
   batch_action :delete_spam do |group_ids|
     group_ids.each do |group_id|
-      if Group.exists?(group_id)
+      if Group.any_trial.exists?(group_id)
         group = Group.find(group_id)
-        user = group.creator || group.admins.first
-        if user
-          UserService.destroy(user: user)
+        if user = group.creator || group.admins.first
+          DestroyUserWorker.perform_async(user.id)
         end
       end
     end
@@ -42,15 +50,18 @@ ActiveAdmin.register Group, as: 'Group' do
       g.full_name
     end
 
+    column :privacy do |g|
+      g.group_privacy
+    end
+
     column "Members", :memberships_count
     column "Discussions", :discussions_count
     column :created_at
     column :description, :sortable => :description do |group|
       group.description
     end
-    column :archived_at
+    column :revoked_at
     column :analytics_enabled
-    column :enable_experiments
     actions
   end
 
@@ -60,12 +71,6 @@ ActiveAdmin.register Group, as: 'Group' do
 
     if defined?(SubscriptionService) && group.subscription_id
       render 'subscription', { subscription: Subscription.for(group)}
-    end
-
-    if group.group_survey
-      panel("Group survey") do
-        link_to("Group survey", admin_group_survey_path(group.group_survey))
-      end
     end
 
     if group.parent_id
@@ -85,18 +90,20 @@ ActiveAdmin.register Group, as: 'Group' do
     end
 
     panel("Members") do
-      table_for group.all_memberships.includes(:user, :inviter).order(created_at: :desc).filter{|m| m.user }.each do |membership|
+      table_for group.all_memberships.includes(:user, :inviter, :revoker).order(created_at: :desc).filter{|m| m.user }.each do |membership|
         column(:name)        { |m| link_to m.user.name, admin_user_path(m.user) }
         column(:email)       { |m| m.user.email }
-        column(:coordinator) { |m| m.admin }
-        column(:inviter)     { |m| m.inviter.try(:name) }
+        column(:admin)       { |m| m.admin }
         column(:created_at)  { |m| m.created_at }
         column(:accepted_at) { |m| m.accepted_at }
-        column(:archived_at) { |m| m.archived_at }
-        column(:saml_session_expires_at) { |m| m.saml_session_expires_at }
-        column "Support" do |m|
-          if m.user.name.present?
-            link_to("Search for #{m.user.name}", "https://support.loomio.org/scp/users.php?a=search&query=#{m.user.name.downcase.split(' ').join('+')}")
+        column(:inviter)     { |m| m.inviter.try(:name) }
+        column(:revoked_at)  { |m| m.revoked_at }
+        column(:revoker)     { |m| m.revoker.try(:name) }
+        column "Toggle admin" do |m|
+          if m.admin?
+            link_to("remove admin", remove_admin_admin_groups_path(membership_id: m.id, group_id: m.group_id), method: :post)
+          else
+            link_to("add admin", add_admin_admin_groups_path(membership_id: m.id, group_id: m.group_id), method: :post)
           end
         end
       end
@@ -134,6 +141,7 @@ ActiveAdmin.register Group, as: 'Group' do
         else
           "Group privacy unknown"
         end
+
       end
 
       row :is_visible_to_public
@@ -150,10 +158,6 @@ ActiveAdmin.register Group, as: 'Group' do
       row :handle
       row :is_referral
       row :subscription_id
-      row :enable_experiments
-      row :analytics_enabled
-      row :experiences
-      row :features
       row :theme_id
       row :cover_photo_file_name
       row :cover_photo_content_type
@@ -162,13 +166,6 @@ ActiveAdmin.register Group, as: 'Group' do
       row :logo_content_type
       row :logo_file_size
       row :logo_updated_at
-      row :psp_links do |group|
-        if group.subscription and defined?(SubscriptionService)
-          raw (Array(SubscriptionService::CURRENT_PLANS).map do |key|
-            '<a href="'+SubscriptionService.psp_url(group, (group.creator || group.admins.first), key)+'">'+key+'</a>'.to_s
-          end.join(" "))
-        end
-      end
     end
 
     if group.archived_at.nil?
@@ -183,6 +180,7 @@ ActiveAdmin.register Group, as: 'Group' do
 
     panel 'Move group' do
       form action: move_admin_group_path(group), method: :post do |f|
+        f.input type: :hidden, name: :authenticity_token
         f.label "Parent group id / key"
         f.input name: :parent_id, value: group.parent_id
         f.input type: :submit, value: "Move group"
@@ -204,8 +202,28 @@ ActiveAdmin.register Group, as: 'Group' do
       f.input :parent_id, label: "Parent Id"
       f.input :handle, as: :string
       f.input :subscription_id, label: "Subscription Id"
+      f.input :is_visible_to_public, label: "Visible to public? (will change privacy of group, subgroups, discussions)"
+      f.input :membership_granted_upon, as: :select, collection: %w[request approval invitation]
     end
     f.actions
+  end
+
+  collection_action :import, method: :get do
+  end
+
+  collection_action :import_json, method: :post do
+    GenericWorker.perform_async('GroupExportService', 'import', params[:url])
+    redirect_to admin_groups_path, notice: "Import started. Check /admin/sidekiq to see when job is complete"
+  end
+
+  collection_action :add_admin, method: :post do
+    Membership.find(params[:membership_id]).update(admin: true)
+    redirect_to admin_group_path(Group.find(params[:group_id]))
+  end
+
+  collection_action :remove_admin, method: :post do
+    Membership.find(params[:membership_id]).update(admin: false)
+    redirect_to admin_group_path(Group.find(params[:group_id]))
   end
 
   member_action :move, method: :post do
@@ -237,7 +255,7 @@ ActiveAdmin.register Group, as: 'Group' do
   end
 
   member_action :delete_group, :method => :post do
-    DestroyGroupWorker.perform_async(params[:id])
+    GroupService.destroy_without_warning!(params[:id])
     redirect_to [:admin, :groups]
   end
 

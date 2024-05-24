@@ -1,104 +1,137 @@
-<script lang="coffee">
-import EventBus from '@/shared/services/event_bus'
-import Records from '@/shared/services/records'
-import Session from '@/shared/services/session'
-import Flash   from '@/shared/services/flash'
-import { onError } from '@/shared/helpers/form'
-import {compact, map, toPairs, fromPairs, some, sortBy, isEqual} from 'lodash'
+<script lang="js">
+import EventBus from '@/shared/services/event_bus';
+import Records from '@/shared/services/records';
+import Session from '@/shared/services/session';
+import Flash   from '@/shared/services/flash';
 
-export default
-  props:
+export default {
+  props: {
     stance: Object
-  data: ->
-    stanceChoices: []
-    pollOptions: []
-    zone: null
-    canRespondMaybe: null
-    stanceValues: []
+  },
 
-  beforeDestroy: ->
-    EventBus.$off 'timeZoneSelected', @setTimeZone
+  data() {
+    return {
+      stanceChoices: [],
+      pollOptions: [],
+      zone: null,
+      stanceValues: []
+    };
+  },
 
-  created: ->
-    EventBus.$on 'timeZoneSelected', @setTimeZone
-    @watchRecords
-      collections: ['poll_options', 'poll']
-      query: (records) =>
-        @canRespondMaybe =  @stance.poll().customFields.can_respond_maybe
-        @stanceValues = if @stance.poll().customFields.can_respond_maybe then [2,1,0] else [2, 0]
-        if !isEqual map(@pollOptions, 'name'), map(@stance.poll().pollOptions(), 'name')
-          @pollOptions = sortBy @stance.poll().pollOptions(), 'name'
-          @stanceChoices = @pollOptions.map (option) =>
-            lastChoice = @stance.stanceChoices().find((sc) => sc.pollOptionId == option.id) || {score: 0}
-            id: option.id
-            pollOption: => option
-            poll: => @stance.poll()
-            score: lastChoice.score
+  beforeDestroy() {
+    EventBus.$off('timeZoneSelected', this.setTimeZone);
+  },
 
-  methods:
-    setTimeZone: (e, zone) ->
-      @zone = zone
+  created() {
+    EventBus.$on('timeZoneSelected', this.setTimeZone);
+    this.watchRecords({
+      collections: ['pollOptions'],
+      query: records => {
+        this.stanceValues = this.poll.canRespondMaybe ? [2,1,0] : [2, 0];
+        if (this.stance.poll().optionsDiffer(this.pollOptions)) {
+          this.pollOptions = this.stance.poll().pollOptionsForVoting();
+          this.stanceChoices = this.pollOptions.map(option => {
+            return {
+              pollOption: option,
+              poll_option_id: option.id,
+              score: this.stance.scoreFor(option)
+            };
+          });
+        }
+      }
+    });
+  },
 
-    submit: ->
-      @stance.stanceChoicesAttributes = @stanceChoices.map (choice) ->
-        {poll_option_id: choice.id, score: choice.score}
+  methods: {
+    setTimeZone(e, zone) {
+      this.zone = zone;
+    },
 
-      actionName = if !@stance.castAt then 'created' else 'updated'
-      @stance.save()
-      .then =>
-        @stance.poll().clearStaleStances()
-        EventBus.$emit "closeModal"
-        Flash.success "poll_#{@stance.poll().pollType}_vote_form.stance_#{actionName}"
-      .catch onError(@stance)
+    submit() {
+      this.stance.stanceChoicesAttributes = this.stanceChoices.map(choice => ({
+        poll_option_id: choice.poll_option_id,
+        score: choice.score
+      }));
 
-    buttonStyleFor: (choice, score) ->
-      if choice.score == score
-        {opacity: 1}
-      else
-        {opacity: 0.3}
+      const actionName = !this.stance.castAt ? 'created' : 'updated';
+      this.stance.save().then(() => {
+        EventBus.$emit("closeModal");
+        Flash.success(`poll_${this.stance.poll().pollType}_vote_form.stance_${actionName}`);
+      }).catch(() => true);
+    },
 
-    imgForScore: (score) ->
-      name = switch score
-        when 2 then 'agree'
-        when 1 then 'abstain'
-        when 0 then 'disagree'
-      "/img/#{name}.svg"
+    buttonStyleFor(choice, score) {
+      if (choice.score === score) {
+        return {opacity: 1};
+      } else {
+        return {opacity: 0.3};
+      }
+    },
 
-    incrementScore: (choice) ->
-      if @canRespondMaybe
-        choice.score = (choice.score + 5) % 3
-      else
-        choice.score = if choice.score == 2
-          0
-        else
-          2
+    imgForScore(score) {
+      const name = (() => { switch (score) {
+        case 2: return 'agree';
+        case 1: return 'abstain';
+        case 0: return 'disagree';
+      } })();
+      return `/img/${name}.svg`;
+    },
 
-  computed:
-    currentUserTimeZone: ->
-      Session.user().timeZone
+    incrementScore(choice) {
+      if (this.poll.canRespondMaybe) {
+        return choice.score = (choice.score + 5) % 3;
+      } else {
+        return choice.score = choice.score === 2 ? 0 : 2;
+      }
+    }
+  },
 
+  computed: {
+    poll() { return this.stance.poll(); },
+    currentUserTimeZone() {
+      return Session.user().timeZone;
+    }
+  }
+};
 
 </script>
 
 <template lang='pug'>
 form.poll-meeting-vote-form(@submit.prevent='submit()')
-  p.text--secondary(v-t="{path: 'poll_meeting_vote_form.local_time_zone', args: {zone: currentUserTimeZone}}")
+  p.text--secondary(
+    v-t="{path: 'poll_meeting_vote_form.local_time_zone', args: {zone: currentUserTimeZone}}"
+  )
   .poll-common-vote-form__options
-    //- h3.lmo-h3.poll-meeting-vote-form--box(v-t="'poll_meeting_vote_form.can_attend'")
-    //- h3.lmo-h3.poll-meeting-vote-form--box(v-t="'poll_meeting_vote_form.if_need_be'", v-if='canRespondMaybe')
-    //- h3.lmo-h3.poll-meeting-vote-form--box(v-t="'poll_meeting_vote_form.unable'")
-    //- time-zone-select.lmo-margin-left
-    v-layout.poll-common-vote-form__option(wrap v-for='choice in stanceChoices' :key='choice.id')
-      poll-common-stance-choice(:poll="stance.poll()" :stance-choice='choice' :zone='zone' @click="incrementScore(choice)")
+    v-layout.poll-common-vote-form__option(
+      v-for='choice in stanceChoices'
+      :key='choice.id'
+      wrap 
+    )
+      poll-common-stance-choice(
+        :poll="stance.poll()"
+        :stance-choice='choice'
+        :zone='zone'
+        @click="incrementScore(choice)"
+      )
       v-spacer
-      v-btn.poll-meeting-vote-form--box(icon :style="buttonStyleFor(choice, i)" v-for='i in stanceValues', :key='i', @click='choice.score = i')
-        v-avatar(:size="36")
+      v-btn.poll-meeting-vote-form--box(
+        v-for='i in stanceValues'
+        :key='i'
+        @click='choice.score = i'
+        :style="buttonStyleFor(choice, i)"
+        icon
+      )
+        v-avatar(:size="32")
           img.poll-common-form__icon(:src="imgForScore(i)")
   validation-errors(:subject='stance', field='stanceChoices')
-  poll-common-add-option-button(:poll='stance.poll()')
-  poll-common-stance-reason(:stance='stance')
+  poll-common-stance-reason(:stance='stance', :poll='poll')
   v-card-actions.poll-common-form-actions
-    v-spacer
-    v-btn.poll-common-vote-form__submit(color="primary" type='submit' :loading="stance.processing")
+    v-btn.poll-common-vote-form__submit(
+      block
+      :disabled="!poll.isVotable()"
+      :loading="stance.processing"
+      color="primary"
+      type='submit'
+    )
       span(v-t="stance.castAt? 'poll_common.update_vote' : 'poll_common.submit_vote'")
 </template>

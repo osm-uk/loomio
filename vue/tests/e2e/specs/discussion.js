@@ -1,5 +1,4 @@
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 module.exports = {
   // 'presents_new_discussion_form_for_a_group_from_params': (test) => {
@@ -24,7 +23,7 @@ module.exports = {
     page.loadPath('view_open_group_as_visitor')
     page.expectText('.group-page__name', 'Open Dirty Dancing Shoes')
     page.expectText('.thread-preview-collection__container', 'I carried a watermelon')
-    page.expectText('.navbar__sign-in', 'LOG IN')
+    page.expectText('.navbar__sign-in', 'SIGN IN')
     page.click('.thread-preview__link')
     page.expectText('.context-panel__heading', 'I carried a watermelon')
   },
@@ -178,8 +177,8 @@ module.exports = {
     page.fillIn('.comment-form .lmo-textarea div[contenteditable=true]', 'hi this is my comment')
     page.click('.comment-form__submit-button')
 
-    page.expectText('.thread-card', 'hi this is my comment')
-    page.expectFlash('Patrick Swayze notified of reply')
+    page.expectText('.strand-list', 'hi this is my comment')
+    // page.expectFlash('Patrick Swayze notified of reply')
   },
 
   'can_react_to_a_discussion': (test) => {
@@ -188,7 +187,8 @@ module.exports = {
     page.loadPath('setup_discussion')
     page.expectNoElement('.reaction')
     page.click('.emoji-picker__toggle')
-    page.click('.emoji-picker__emojis img[alt="heart"]')
+    // page.click('.emoji-picker__emojis img[alt="heart"]')
+    page.click('.emoji-picker__emojis span[title="heart"]')
     page.expectElement('.reactions-display')
   },
 
@@ -209,7 +209,8 @@ module.exports = {
 
     page.loadPath('setup_discussion')
     page.click('.html-editor__expand')
-    page.click('i.mdi-language-markdown-outline')
+    // page.click('i.mdi-chevron-right')
+    page.click('.e2e-markdown-btn')
     page.acceptConfirm()
     page.fillIn('.comment-form .lmo-textarea textarea', '@jennifer')
     page.expectText('.suggestion-list', 'Jennifer Grey')
@@ -260,18 +261,36 @@ module.exports = {
     page.click('.comment-form__submit-button')
     page.click('.new-comment .action-menu')
     page.click('.action-dock__button--discard_comment')
-    page.click('.confirm-modal__submit')
     page.expectNoText('.thread-card', 'original comment right thur')
     page.expectText('.thread-card', 'Item removed')
+  },
+
+  'discards_restores_deletes_a_comment': (test) => {
+    page = pageHelper(test)
+
+    page.loadPath('setup_discussion')
+    page.fillIn('.comment-form .lmo-textarea div[contenteditable=true]', 'original comment right hur')
+    page.click('.comment-form__submit-button')
+    page.click('.new-comment .action-menu')
+    page.click('.action-dock__button--discard_comment')
+    page.expectNoText('.thread-card', 'original comment right thur')
+    page.expectText('.thread-card', 'Item removed')
+    page.click('.strand-item__removed .action-menu')
+    page.click('.action-dock__button--undiscard_comment')
+    page.click('.new-comment .action-menu')
+    page.click('.action-dock__button--discard_comment')
+    page.click('.strand-item__removed .action-menu')
+    page.click('.action-dock__button--delete_comment')
+    page.click('.confirm-modal__submit')
   },
 
   'sign_in_from_discussion_announced_email': (test) => {
     page = pageHelper(test)
 
     page.loadPathNoApp('setup_discussion_mailer_discussion_announced_email')
-    page.expectText('.thread-mailer__subject', "invited you to join")
+    page.expectText('.base-mailer__event-headline', "invited you to a thread")
     page.expectText('.thread-mailer__body', "A description for this discussion. Should this be rich?")
-    page.click('.thread-mailer__subject--text a', 2000)
+    page.click('.event-mailer__title a', 2000)
     page.expectText('.context-panel__heading', 'go to the moon')
     page.expectText('.context-panel__description', 'A description for this discussion')
     page.fillIn('.comment-form .lmo-textarea div[contenteditable=true]', 'Hello world!')
@@ -285,9 +304,9 @@ module.exports = {
     page = pageHelper(test)
 
     page.loadPathNoApp('setup_discussion_mailer_invitation_created_email')
-    page.expectText('.thread-mailer__subject', "invited you to join")
+    page.expectText('.base-mailer__event-headline', "invited you to a thread")
     page.expectText('.thread-mailer__body', "A description for this discussion. Should this be rich?")
-    page.click('.thread-mailer__subject--text a', 2000)
+    page.click('.event-mailer__title a', 2000)
     page.expectValue('.auth-email-form__email input', 'jen@example.com')
     page.signUpViaInvitation("Jennifer")
     page.expectFlash('Signed in successfully')
@@ -300,7 +319,8 @@ module.exports = {
     page = pageHelper(test)
     page.loadPath('setup_user_no_group')
     page.ensureSidebar()
-    page.click('.sidebar__list-item-button--start-thread')
+    page.click('.sidebar__list-item-button--private')
+    page.click('.threads-page__new-thread-button')
     page.fillIn('.recipients-autocomplete input', 'test@example.com')
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')

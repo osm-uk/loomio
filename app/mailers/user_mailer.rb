@@ -1,13 +1,9 @@
 class UserMailer < BaseMailer
-  helper PollEmailHelper
-  layout 'invite_people_mailer', only: [:deactivated, :membership_request_approved, :contact_request, :user_added_to_group, :login, :start_decision, :accounts_merged, :user_reactivated, :group_export_ready]
-
-  def deactivated(email, recovery_code, locale)
-    @recovery_code = recovery_code
+  def redacted(email, locale)
     send_single_mail to: email,
-                     subject_key: "user_mailer.deactivated.subject",
-                     subject_params: { site_name: AppConfig.theme[:site_name] },
-                     locale: locale
+                      subject_key: "user_mailer.redacted.subject",
+                      subject_params: { site_name: AppConfig.theme[:site_name] },
+                      locale: locale
   end
 
   def accounts_merged(user_id)
@@ -31,13 +27,17 @@ class UserMailer < BaseMailer
 
   def catch_up(user_id, time_since = nil, frequency = 'daily')
     user = User.find(user_id)
-    return unless user.email_catch_up
-    @recipient = @user = user
+    return unless user.email_catch_up_day
+    @current_user = @recipient = @user = user
+
     if frequency == 'daily'
       @time_start = time_since || 24.hours.ago
+    elsif frequency == 'other'
+      @time_start = time_since || 48.hours.ago
     else
       @time_start = time_since || 1.week.ago
     end
+
     @time_finish = Time.zone.now
     @time_frame = @time_start...@time_finish
 
@@ -53,7 +53,7 @@ class UserMailer < BaseMailer
     @subject_key = "email.catch_up.#{frequency}_subject"
     @subject_params = { site_name: AppConfig.theme[:site_name] }
 
-    unless @discussions.empty? or @user.groups.empty?
+    unless @discussions.empty?
       @discussions_by_group_id = @discussions.group_by(&:group_id)
       send_single_mail to: @user.email,
                        subject_key: @subject_key,
@@ -101,16 +101,6 @@ class UserMailer < BaseMailer
     @token = LoginToken.find_by!(id: token_id)
     send_single_mail to: @user.email,
                      subject_key: "email.login.subject",
-                     subject_params: {site_name: AppConfig.theme[:site_name]},
-                     locale: @user.locale
-  end
-
-  def user_reactivated(recipient_id, event_id)
-    @user = User.find_by!(id: recipient_id)
-
-    @token = @user.login_tokens.create(is_reactivation: true)
-    send_single_mail to: @user.email,
-                     subject_key: "email.reactivate.subject",
                      subject_params: {site_name: AppConfig.theme[:site_name]},
                      locale: @user.locale
   end

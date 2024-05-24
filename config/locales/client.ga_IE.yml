@@ -1,4 +1,10 @@
 ga_IE:
+  start_trial:
+    your_name: D'ainm
+    your_email: Do sheoladh ríomhphoist
+    success: D'éirigh leis!
+  templates:
+    try_loomio: Bain triail as Loomio
   plan_names:
     free: Saor in aisce
     pro: Pro
@@ -19,26 +25,14 @@ ga_IE:
     modal_title: Cruthaigh clib nua
     modal_edit_title: Cuir clib in eagar
     modal_destroy_title: Bain clib
-  reactions:
-    laughing: Gáire
-    clap: Bualadh bos
-    hugging: Barróg
-    sunglasses: Seolta
-    nerd: Cliste
-    worried: Buartha
-    confused: Mearbhall
-    neutral_face: Neodrach
-    angry: Feargach
-    cry: Ag gol
-    scream: Scread
-    ok_hand: Tá go maith
-    wave: Crith láimhe
-    thumbsup: Ordóg in airde
-    thumbsdown: Ordóg thíos
   timezones:
-    local: An t-am áitiúil ({{luach}})
+    local: An t-am áitiúil (%{luach})
   common:
+    are_you_sure: An bhfuil tú cinnte?
+    please_wait: Fan le do thoil
+    version: Leagan
     no_results_found: Níor aimsíodh aon rud
+    or: nó
     option: Rogha
     add: Cuir leis
     you: Tusa
@@ -54,8 +48,8 @@ ga_IE:
     time:
       am: rn
       pm: in
-    closing_in: 'Ag dúnadh {{time}}'
-    closed_ago: 'Dúnta {{time}}'
+    closing_in: 'Ag dúnadh %{time}'
+    closed_ago: 'Dúnta %{time}'
     volume: 'Airde'
     notification_volume: 'Airde an Fhógra'
     group: 'Baicle'
@@ -83,8 +77,6 @@ ga_IE:
       thismonth: 'An Mhí Seo'
       older: 'Níos Sine Fós'
     more_help: 'Tuilleadh cabhair'
-    models:
-      proposal: 'Togra'
     copy: 'Macasamhlaigh'
     reset: 'Athshocraigh é'
     copy_text: 'Macasamhlaigh an téacs'
@@ -120,6 +112,7 @@ ga_IE:
       share: Comhroinn é
       ok: Tá go maith
       retry: Atriail
+      clear: Glan
       done: Déanta
       start: Tosaigh
       delete: Scrios
@@ -144,7 +137,7 @@ ga_IE:
     page_not_found: 'Theip orainn sin a aimsiú. B''fhéidir gur scriosadh é nó bogadh é.'
     internal_server_error: 'Is dona linn seo. Tá rud éigin cearr. Déan arís é le do thoil.'
   previous_polls_page:
-    heading: Gníomhaíocht in {{ainm}}
+    heading: Gníomhaíocht in %{ainm}
     search_activities: Cuardaigh cinntí
   volume_levels:
     loud: 'Ard'
@@ -173,12 +166,6 @@ ga_IE:
     user:
       title: Socruithe ríomhphoist i gcomhair baiclí nua
       apply_to_all: "Cuir na socruithe seo i bhfeidhm ar gach ceann de mo bhaiclí."
-  mute_explanation_modal:
-    aria_label: Balbhaigh an tsnáthaid
-    mute_thread: Balbhaigh an tsnáthaid
-  dismiss_explanation_modal:
-    aria_label: Déan neamhaird den snáthaid
-    dismiss_thread: Déan neamhaird den snáthaid
   inbox:
     clear: 'Glan'
     latest: 'Is déanaí'
@@ -238,14 +225,10 @@ ga_IE:
   membership_dropdown:
     cancel_invitation: 'Cealaigh an cuireadh '
   notification_models:
-    poll: 'cinneadh:'
     outcome: 'toradh:'
   notifications:
     header: "Fógraí"
     no_notifications: "Níl aon fhógra agat"
-    motion_closed: "Dúnadh an togra: <strong>{{title}}</strong>"
-    publish_outcome: "Foilsigh toradh"
-    poll_expired: "Tá {{poll_type}} dúnta: <strong>{{title}}</strong>"
   discussion_fork_actions:
     move: Bog é
   discussion_form:
@@ -261,17 +244,19 @@ ga_IE:
     title_label: 'Teideal'
     title_placeholder: 'Cad é an t-ábhar is mian leat a phlé?'
     context_label: 'Comhthéacs'
-    context_placeholder: 'Cuir dóthain eolas cúlra ar fáil don bhaicle le go mbeidh an plé torthúil. Is féidir seo a nuashonrú fad is atá an plé ar bun'
     privacy_label: 'Príobháideachas'
   announcement:
     form:
       invitation_message_label: Teachtaireacht
       poll_reminder:
         message_label: Teachtaireacht
+      wip_poll_reminder:
+        message_label: Teachtaireacht
   action_dock:
     edit_stance: Athraigh do sheasamh
     edited: Curtha in eagar
     delete_thread: Scriosadh an tsnáith
+    count_members: "%{count} chomhalta"
   formatting:
     attach: Ceangail comhad
     reset: Athshocraigh é
@@ -282,21 +267,21 @@ ga_IE:
     join_group: Cláraigh leis an mbaicle
     membership_requested: Iarratas ballraíocht déanta
     messages:
-      joined_group: 'Is comhalta de {{group}} anois thú'
+      joined_group: 'Is comhalta de %{group} anois thú'
   membership_request_form:
     heading: Iarr cead dul isteach sa bhaicle
     name_label: Ainm
     email_label: Seoladh ríomhphoist
     introduction_label: Cén fáth is mian leat bheith mar chuid de?
-    messages:
-      membership_requested: 'D''iarr tú cead bheith i do chomhalta de {{group}}'
   revision_history_modal:
+    started_by: 'Tosaithe ag <strong>%{name}</strong> '
     posted: Foilsithe
     current_revision: Is déanaí
   reactions_display:
     you: "Tusa"
   group_page:
     threads: Snáitheanna
+    decisions: Cinntí
     members: Comhaltaí
     settings: Socruithe
     subgroups: Fobhaiclí
@@ -366,13 +351,10 @@ ga_IE:
     approve: Ceadaigh
     ignore: Déan neamhaird de
     previous_requests: Iarratais a bhí ann cheana
-    previous_request_response: '{{response}} ó {{responder}} '
+    previous_request_response: '%{response} ó %{responder} '
     messages:
       request_approved_success: Iarratas le bheith mar chomhalta ceadaithe
       request_ignored_success: Déanadh neamhaird ar iarratas le bheith mar chomhalta
-  group_previous_proposals_card:
-    heading: Tograí Roimhe Seo
-    see_more: Féach tuilleadh
   invitation_form:
     invite_people: 'Tabhair cuirí do dhaoine'
     group: 'Baicle'
@@ -381,21 +363,19 @@ ga_IE:
     email_addresses: 'Seoltaí ríomhphoist'
     email_addresses_placeholder: 'm.sh. helperbot@loomio.org, friendlybot@loomio.org'
     custom_message: 'Teachtaireacht saincheaptha'
-    team_invitation_link: 'faigh nasc le roinnt ar dhaoine.'
     add_members: 'Cuir comhaltaí leis'
-    from_parent_group: 'ó {{name}}.'
+    from_parent_group: 'ó %{name}.'
     send: 'Seol'
     done: 'Déanta'
     messages:
       invitation_sent: 'Seoladh an cuireadh.'
-      invitations_sent: 'Seoladh {{count}} cuireadh'
   memberships_page:
     members: 'Comhaltaí'
     name_label: 'Ainm'
     remove_member_label: 'Bain é'
     fragment_placeholder: 'Scag na hainmneacha nó ainmneacha úsáideora...'
     messages:
-      remove_member_success: 'Baineadh {{name}}'
+      remove_member_success: 'Baineadh %{name}'
   membership_remove_modal:
     invitation:
       title: 'Cealaigh an cuireadh '
@@ -423,12 +403,19 @@ ga_IE:
     locale_placeholder: Roghnaigh an teanga is mian leat
     location_label: 'Suíomh'
     update_profile: 'Nuashonraigh an bheathaisnéisín'
+    deactivate_account: 'Díghníomhachtaigh an cuntas'
   change_picture_form:
     use_gravatar: 'Bain feidhm as Gravatar'
   deactivation_modal:
-    introduction: 'Nuair a dhíghníomhachtaíonn tú do chuntas:'
+    deactivate_introduction: 'Nuair a dhíghníomhachtaíonn tú do chuntas:'
   email_settings_page:
-    daily_summary_label: Ríomhphost le hachoimre laethúil
+    monday: Dé Luain
+    tuesday: Dé Máirt
+    wednesday: Dé Céadaoin
+    thursday: Déardaoin
+    friday: Dé hAoine
+    saturday: Dé Sathairn
+    sunday: Dé Domhnaigh
     announcement_label: Fógraí
     edit: Eagar
     messages:
@@ -455,10 +442,6 @@ ga_IE:
       proposals_description: Féach ar snáitheanna le tograí gníomhacha amháin
       muted_aria_label: Ag taispeáint faoi láthair na snáitheanna balbhaithe
       muted_description: Taispeáin na snáitheanna balbhaithe amháin
-    aria_thread:
-      unread: '{{count}} míreanna nár léadh.'
-      current_proposal: 'An togra reatha: {{name}}.'
-      you_voted: 'Is mar seo a chaith tú do ghuth: {{position}}.'
     thread_preview:
       undecided: 'Níl cinneadh déanta agat'
     threads_from:
@@ -480,7 +463,7 @@ ga_IE:
     activity: 'Gníomhaíocht'
     activity_placeholder: 'Níl aon ghníomhaíocht ann go fóill!'
     load_previous: 'Luchtaigh gníomhaíocht níos luaithe ná seo'
-    started_by: 'Tosaithe ag <strong>{{name}}</strong> '
+    started_by: 'Tosaithe ag <strong>%{name}</strong> '
   activity_card:
     latest: Is déanaí
     context: Comhthéacs
@@ -508,8 +491,6 @@ ga_IE:
     confirm: Bog an snáithe
   delete_comment_dialog:
     title: 'Scrios an trácht'
-    question: 'An bhfuil tú cinnte go dteastaíonn uait an trácht seo a scriosadh?'
-    confirm: 'Scrios an trácht'
   contact_message_form:
     contact_us: 'Déan teagmháil linn'
     name_label: 'D''ainm'
@@ -519,19 +500,14 @@ ga_IE:
     email_placeholder: 'Cuir isteach do sheoladh ríomhphoist...'
     message_label: 'Do theachtaireacht'
     send_message: 'Seol an teachtaireacht'
-  hint:
-    discussion: 'Leideanna chun tús a chur le plé mealltach'
-    invitation: 'Leideanna chun cuireadh den scoth a scríobh'
-    proposal: 'Leideanna chun togra soiléir a scríobh'
-    vote: 'Tig leat do sheasamh a athrú am ar bith'
   global:
     messages:
       reload: 'Athluchtaigh é'
   decision_tools_card:
     proposal_title: Togra
-    count_title: Dearbháil
     poll_title: Vótáil
   poll_common:
+    proposal: Togra
     have_your_say: Abair leat
     message: Teachtaireacht
     details: Mionsonraí
@@ -543,6 +519,7 @@ ga_IE:
     all: Uile
     closed: Dúnta
   members_panel:
+    all: Uile
     order_by_name: 'Ainm'
     header_name: 'Ainm'
     header_username: 'Ainm úsáideora'
@@ -551,14 +528,10 @@ ga_IE:
     all: 'Uile'
     open: 'Ar oscailt'
     closed: 'Dúnta'
-  current_polls_card:
-    start_poll: Cinneadh nua
   poll_common_calendar_invite:
     event_duration: Fad
     event_summary: Ainm an chruinnithe
     location: Suíomh
-  poll_common_close_form:
-    close_proposal: Dún an togra
   poll_common_closing_at_field:
     closing: Ag dúnadh
   poll_common_form:
@@ -570,21 +543,34 @@ ga_IE:
     closing: Ag dúnadh
     closed: Dúnta
     start: Tosaigh
-    start_poll_type: Tosaigh {{poll_type}}
-    share_poll_type: Comhroinn {{poll_type}}
+    start_poll_type: Tosaigh %{poll_type}
+    share_poll_type: Comhroinn %{poll_type}
     update: Nuashonraigh é
   poll_ranked_choice_form:
     no_options: "Níor chuir tú aon roghanna leis fós."
     rank: Rangaigh
-  poll_count_options:
+  poll_proposal_options:
     'no': 'Ná cealaigh é'
-  poll_count_vote_form:
-    reason_label: Teachtaireacht
+  poll_count_options:
+    decline: Diúltaigh dó
+    'no': 'Ná cealaigh é'
   poll_meeting_chart_panel:
     total: Iomlán
-  poll_common_subscribe_form:
-    subscribe: Liostáil
-    no_thanks: Níor mhaith liom é
+  poll_templates:
+    proposal:
+      agree: Aontaigh
+      abstain: Staon
+      disagree: Easaontaigh
+    advice:
+      agree: Aontaigh
+      abstain: Staon
+    consensus:
+      agree: Aontaigh
+      abstain: Staon
+      disagree: Easaontaigh
+      block: Cros
+    sense_check:
+      abstain: Staon
   auth_form:
     code: '000000'
     continue: Lean ar aghaidh
@@ -595,32 +581,21 @@ ga_IE:
     email_placeholder: tusa@suíomh.com
     name_placeholder: D'ainm
     name_required: Cuir isteach ainm
-    welcome_back: Fáilte ar ais, a {{name}}!
-    hello: "Hóra a {{name}}!"
+    welcome_back: Fáilte ar ais, a %{name}!
+    hello: "Hóra a %{name}!"
     name: Ainm
     email: Seoladh ríomhphoist
     password: Focal faire
+  chatbot:
+    username: Ainm úsáideora
+    password: Focal faire
+    slack: Slack
+    microsoft_teams: Microsoft Teams
   webhook:
     formats:
       microsoft: Microsoft Teams
       slack: Slack
     name_label: Ainm
-  configure_sso:
-    idp_metadata_url_placeholder: https://app.myprovider.com/saml/metadata/abc123
   group_survey:
-    success: Go raibh maith agat!
     categories:
       other: Eile
-    sizes:
-      ten: "< 10"
-      twenty: "11 - 20"
-      fifty: "21 - 50"
-      two_hundred: "51 - 200"
-      five_hundred: "201 - 500"
-      two_thousand: "501 - 2000"
-      else: "> 2000"
-    uses:
-      other: Eile
-    referrers:
-      other: Eile
-    referrer: "Cén chaoi a chuir tú eolas ar Loomio?"

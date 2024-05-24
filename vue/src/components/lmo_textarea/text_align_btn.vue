@@ -1,25 +1,34 @@
-<script lang="coffee">
-import { isNodeActive } from '@/shared/tiptap_extentions/utils/node'
-
+<script lang="js">
 export default
-  props:
-    commands: Object
+{
+  props: {
     editor: Object
+  },
 
-  methods:
-    isActive: (alignment) ->
-      isNodeActive(@editor.state, 'textAlign', alignment)
+  methods: {
+    isActive(alignment) {
+      return this.editor.isActive({ textAlign: alignment });
+    }
+  },
 
-  computed:
-    current: ->
-      ['left', 'center', 'right'].find((v) => @isActive(v)) || "left"
+  computed: {
+    showOutline() {
+      return this.editor.isActive({ textAlign: 'right' }) || this.editor.isActive({ textAlign: 'center' });
+    },
 
-    alignments: ->
-      [
-        { label: 'formatting.left_align', value: 'left', command: @commands.alignment },
-        { label: 'formatting.center_align', value: 'center', command: @commands.alignment },
-        { label: 'formatting.right_align', value: 'right', command: @commands.alignment },
-      ]
+    current() {
+      return ['left', 'center', 'right'].find(v => this.isActive(v)) || "left";
+    },
+
+    alignments() {
+      return [
+        { label: 'formatting.left_align', value: 'left' },
+        { label: 'formatting.center_align', value: 'center' },
+        { label: 'formatting.right_align', value: 'right' },
+      ];
+    }
+  }
+};
 
 </script>
 
@@ -27,13 +36,12 @@ export default
 v-menu
   template(v-slot:activator="{ on, attrs }")
     div.rounded-lg
-      v-btn.drop-down-button(icon v-on="on" :title="$t('formatting.alignment')")
-        v-icon mdi-format-align-{{current}}
-        v-icon.menu-down-arrow mdi-menu-down
+      v-btn.drop-down-button(small icon v-on="on" :outlined="showOutline" :title="$t('formatting.alignment')")
+        common-icon(small :name="'mdi-format-align-'+current")
   v-list(dense)
-    v-list-item(v-for="(item, index) in alignments" :key="index" :class="{ 'v-list-item--active': isActive(item.value) }" @click="item.command({ textAlign: item.value })")
+    v-list-item(v-for="(item, index) in alignments" :key="index" :class="{ 'v-list-item--active': editor.isActive({ textAlign: item.value }) }" @click="editor.chain().focus().setTextAlign(item.value).run()")
       v-list-item-icon
-        v-icon {{'mdi-format-align-'+item.value}}
+        common-icon(small :name="'mdi-format-align-'+item.value")
       v-list-item-title(v-t="item.label")
 </template>
 

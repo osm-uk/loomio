@@ -1,30 +1,42 @@
-<script lang="coffee">
-import AbilityService from '@/shared/services/ability_service'
-import { map, compact, pick } from 'lodash'
+<script lang="js">
+import AbilityService from '@/shared/services/ability_service';
+import { map, compact  } from 'lodash-es';
 
 export default
-  props:
+{
+  props: {
     poll: Object
+  },
 
-  computed:
-    groups: ->
-      map compact([(@poll.groupId && @poll.group()), (@poll.discussionId && @poll.discussion())]), (model) =>
-        if model.isA('discussion')
-          text: model.name || model.title
-          disabled: false
-          to: @urlFor(model)+'/'+@poll.createdEvent().sequenceId
-        else
-          text: model.name || model.title
-          disabled: false
-          to: @urlFor(model)
+  computed: {
+    groups() {
+      return map(compact([(this.poll.groupId && this.poll.group()), (this.poll.discussionId && this.poll.discussion())]), model => {
+        if (model.isA('discussion')) {
+          return {
+            text: model.name || model.title,
+            disabled: false,
+            to: this.urlFor(model)+'/'+this.poll.createdEvent().sequenceId
+          };
+        } else {
+          return {
+            text: model.name || model.title,
+            disabled: false,
+            to: this.urlFor(model)
+          };
+        }
+      });
+    }
+  }
+};
 </script>
 
 <template lang="pug">
-v-layout.poll-common-card-header(align-center mr-3 ml-2 pt-2 wrap)
-  v-breadcrumbs(:items="groups" divider=">")
+.poll-common-card-header.d-flex.align-center.mr-3.ml-2.pb-2.pt-4.flex-wrap
+  v-breadcrumbs(:items="groups")
+    template(v-slot:divider)
+      common-icon(name="mdi-chevron-right")
   v-spacer
-  span.grey--text.body-2
-    time-ago(:date='poll.createdAt')
+  tags-display(:tags="poll.tags" :group="poll.group()")
 </template>
 
 <style lang="sass">

@@ -1,70 +1,95 @@
-<script lang="coffee">
-import Session from '@/shared/services/session'
-import ChangeVolumeModalMixin from '@/mixins/change_volume_modal'
-import GroupService from '@/shared/services/group_service'
-import Flash from '@/shared/services/flash'
-import { onError } from '@/shared/helpers/form'
+<script lang="js">
+import Session from '@/shared/services/session';
+import ChangeVolumeModalMixin from '@/mixins/change_volume_modal';
+import GroupService from '@/shared/services/group_service';
+import Flash from '@/shared/services/flash';
 
-export default
-  mixins: [ChangeVolumeModalMixin]
-  props:
-    model: Object
-    close: Function
-    showClose:
-      default: true
+export default {
+  mixins: [ChangeVolumeModalMixin],
+  props: {
+    model: Object,
+    close: Function,
+    showClose: {
+    default: true,
       type: Boolean
+    }
+  },
 
-  data: ->
-    includeInCatchUp: true
-    volumeLevels: ["loud", "normal", "quiet"]
-    isDisabled: false
-    applyToAll: @defaultApplyToAll()
-    volume: @defaultVolume()
+  data() {
+    return {
+      includeInCatchUp: true,
+      volumeLevels: ["loud", "normal", "quiet"],
+      isDisabled: false,
+      applyToAll: this.defaultApplyToAll(),
+      volume: this.defaultVolume()
+    };
+  },
 
-  computed:
-    formChanged: ->
-      (@volume != @defaultVolume()) || (@applyToAll != @defaultApplyToAll())
+  computed: {
+    formChanged() {
+      return (this.volume !== this.defaultVolume()) || (this.applyToAll !== this.defaultApplyToAll());
+    },
 
-  methods:
-    submit: ->
-      @model.saveVolume(@volume, @applyToAll)
-      .then =>
-        Flash.success 'change_volume_form.saved'
-        @closeModal()
-      .catch onError(@model)
+    title() {
+      switch (this.model.constructor.singular) {
+      case 'discussion': return this.model.title;
+      case 'membership': return this.model.group().name;
+      case 'user':       return this.model.name;
+      }
+    }
+  },
 
-    defaultApplyToAll: ->
-      if @model.isA('user') then true else false
+  methods: {
+    submit() {
+      this.model.saveVolume(this.volume, this.applyToAll)
+      .then(() => {
+        Flash.success('change_volume_form.saved');
+        this.closeModal();
+      });
+    },
 
-    defaultVolume: ->
-      switch @model.constructor.singular
-        when 'discussion' then @model.volume()
-        when 'membership' then @model.volume
-        when 'user'       then @model.defaultMembershipVolume
+    defaultApplyToAll() {
+      if (this.model.isA('user')) { return true; } else { return false; }
+    },
 
-    labelFor: (volume) ->
-      @$t("change_volume_form.simple.#{volume}_explain") + ' ('+@$t("change_volume_form.simple.#{volume}")+')'
-      # @$t("change_volume_form.simple.#{volume}")+' - '+@$t("change_volume_form.simple.#{volume}_explain")
+    defaultVolume() {
+      switch (this.model.constructor.singular) {
+      case 'discussion': return this.model.volume();
+      case 'membership': return this.model.volume;
+      case 'user':       return null;
+      }
+    },
 
-    translateKey: (key) ->
-      if @model.isA('user')
-        "change_volume_form.all_groups"
-      else
-        "change_volume_form.#{key || @model.constructor.singular}"
+    labelFor(volume) {
+      return this.$t(`change_volume_form.simple.${volume}_explain`) + ' ('+this.$t(`change_volume_form.simple.${volume}`)+')';
+    },
 
+    translateKey(key) {
+      if (this.model.isA('user')) {
+        return "change_volume_form.all_groups";
+      } else {
+        return `change_volume_form.${key || this.model.constructor.singular}`;
+      }
+    },
 
-    groupName: ->
-      if @model.groupName
-        @model.groupName()
-      else
-        ''
-    openGroupVolumeModal: ->
-      @closeModal()
-      setTimeout => GroupService.actions(@model.group(), @).change_volume.perform()
+    groupName() {
+      if (this.model.groupName) {
+        return this.model.groupName();
+      } else {
+        return '';
+      }
+    },
+    openGroupVolumeModal() {
+      this.closeModal();
+      setTimeout(() => GroupService.actions(this.model.group(), this).change_volume.perform());
+    },
 
-    openUserPreferences: ->
-      @closeModal()
-      @$router.push('/email_preferences')
+    openUserPreferences() {
+      this.closeModal();
+      this.$router.push('/email_preferences');
+    }
+  }
+};
 
 </script>
 <template lang="pug">
@@ -72,7 +97,7 @@ v-card.change-volume-form
   form
     submit-overlay(:value='model.processing')
     v-card-title
-      h1.headline.change-volume-form__title(v-t="{ path: translateKey() + '.title', args: { title: model.title || model.name || groupName() } }")
+      h1.text-h5.change-volume-form__title(v-t="{ path: translateKey() + '.title', args: { title: title } }")
       v-spacer
       dismiss-modal-button(v-if="showClose")
     v-card-text
@@ -93,6 +118,7 @@ v-card.change-volume-form
       p.mt-4(v-if="model.isA('membership')")
         a(@click="openUserPreferences()" v-t="'change_volume_form.discussion.user'")
     v-card-actions(align-center)
+      help-link(path="en/user_manual/users/email_settings/#group-email-notification-settings")
       v-spacer
       v-btn.change-volume-form__submit(type='button', :disabled='!formChanged', v-t="'common.action.update'" @click='submit()' color="primary")
 </template>

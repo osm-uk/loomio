@@ -4,9 +4,14 @@ class API::V1::BootController < API::V1::RestfulController
     EventBus.broadcast('boot_site', current_user)
   end
 
-  def user
-    flash[:notice] = I18n.t(:'errors.clear_cache')
-    render json: user_payload
+  def version
+    render json: {
+      version: Loomio::Version.current,
+      release: AppConfig.release,
+      reload: (params.fetch(:version, '0.0.0') < Loomio::Version.current) ||
+              (ENV['LOOMIO_SYSTEM_RELOAD'] && AppConfig.release != params[:release]),
+      notice: ENV['LOOMIO_SYSTEM_NOTICE']
+    }
   end
 
   private
@@ -19,7 +24,7 @@ class API::V1::BootController < API::V1::RestfulController
 
   def set_channel_token
     token = SecureRandom.hex
-    CHANNELS_REDIS_POOL.with do |client|
+    CACHE_REDIS_POOL.with do |client|
       client.set("/current_users/#{token}",
         {name: current_user.name,
          group_ids: current_user.group_ids,

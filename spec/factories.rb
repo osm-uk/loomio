@@ -1,12 +1,9 @@
 FactoryBot.define do
 
-  factory :blacklisted_password do
-    string { "MyString" }
-  end
-
   factory :membership do |m|
     m.user { |u| u.association(:user)}
     m.group { |g| g.association(:group)}
+    accepted_at { 1.day.ago }
   end
 
   factory :pending_membership, class: Membership do |m|
@@ -16,13 +13,8 @@ FactoryBot.define do
 
   factory :tag, class: Tag do
     association :group, factory: :group
-    # name "metatag"
-    # color "#656565"
-  end
-
-  factory :discussion_tag do
-    discussion
-    tag
+    name {"example tag"}
+    color {"#656565"}
   end
 
   factory :user do
@@ -57,29 +49,6 @@ FactoryBot.define do
     end
   end
 
-  factory :slack_identity, class: Identities::Slack do
-    user
-    identity_type { "slack" }
-    access_token { "dat_access" }
-    uid { "U123" }
-    sequence(:name) { Faker::Name.name }
-    sequence(:email) { Faker::Internet.email }
-    custom_fields {{
-      slack_team_id: "T123",
-      slack_team_name: "Hojo's Honchos"
-    }}
-  end
-
-  factory :facebook_identity, class: Identities::Facebook do
-    user
-    identity_type { "facebook" }
-    access_token { "access_dat" }
-    uid { "U123" }
-    sequence(:name) { Faker::Name.name }
-    sequence(:email) { Faker::Internet.email }
-    custom_fields { { facebook_group_id: "G123" } }
-  end
-
   factory :group do
     sequence(:name) { Faker::Name.name }
     description { 'A description for this group' }
@@ -91,20 +60,19 @@ FactoryBot.define do
       user = create(:user)
       group.parent&.add_admin!(user)
       group.add_admin!(user)
+      # create(:tag, group: group, name: "cool")
+      # create(:tag, group: group, name: "wowzers")
+      # create(:tag, group: group, name: "example tag")
     end
   end
 
-  factory :webhook do
-    name {"webhook"}
-    url {"https://outlook.office.com/webhook.url"}
+  factory :chatbot do
+    name {"chatbot"}
+    server {"https://outlook.office.com/webhook.url"}
     event_kinds {['poll_created']}
-    format {"markdown"}
+    webhook_kind {"markdown"}
+    kind {"webhook"}
     association :group
-  end
-
-  factory :group_identity do
-    association :group, factory: :group
-    association :identity, factory: :slack_identity
   end
 
   factory :event do
@@ -130,13 +98,17 @@ FactoryBot.define do
     association :author, :factory => :user
     association :group, :factory => :group
     title { Faker::Name.name }
-    description { 'A description for this discussion. Should this be *rich*?' }
-    uses_markdown { true }
+    description_format { 'html' }
+    description { "<p>A description for this discussion. Should this be <em>rich</em>?</p>" }
+    link_previews { [{'title': 'link title', 'url': 'https://www.example.com', 'description': 'a link to a page', 'image': 'https://www.loomio.org/theme/logo.svg', 'hostname':'www.example.com'}] }
     private { true }
+    tags { group ? group.tags.map {|t| t.name} : [] }
+
     before(:create) do |discussion|
       discussion.group.parent&.add_member!(discussion.author)
       discussion.group.add_member!(discussion.author)
     end
+
     after(:create) do |discussion|
       discussion.create_missing_created_event!
       discussion.group.save if discussion.group.presence
@@ -213,13 +185,6 @@ FactoryBot.define do
     query { "test query" }
   end
 
-  factory :default_group_cover do
-    cover_photo_file_name { "test.jpg" }
-    cover_photo_file_size { 10000 }
-    cover_photo_content_type { "image/jpeg" }
-    cover_photo_updated_at { 10.days.ago }
-  end
-
   factory :poll_option do
     name { "Plan A" }
   end
@@ -236,6 +201,33 @@ FactoryBot.define do
     after :create do |poll|
       poll.create_missing_created_event!
     end
+  end
+
+  factory :poll_template do
+    poll_type { "proposal" }
+    process_name { "Process name"}
+    process_subtitle { "This is a proces subtitle"}
+    process_introduction { "This is a proces introduction"}
+    process_introduction_format { "html"}
+    title { "This is a poll" }
+    details { "with a description" }
+    association :author, factory: :user
+    association :group
+    poll_options { {name: "agree"} }
+    created_at { 2.days.ago }
+    notify_on_closing_soon { "voters" }
+  end
+
+  factory :discussion_template do
+    process_name { "Process name"}
+    process_subtitle { "This is a proces subtitle"}
+    process_introduction { "This is a proces introduction"}
+    process_introduction_format { "html"}
+    title { "This is a poll" }
+    description { "with a description" }
+    association :author, factory: :user
+    association :group
+    created_at { 2.days.ago }
   end
 
   factory :poll_proposal, class: Poll do
@@ -294,6 +286,7 @@ FactoryBot.define do
   factory :stance do
     poll
     association :participant, factory: :user
+    reason { 'i have my reasons' }
   end
 
   factory :stance_choice do

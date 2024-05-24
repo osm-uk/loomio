@@ -1,7 +1,6 @@
 class ApplicationController < ActionController::Base
   include LocalesHelper
   include ProtectedFromForgery
-  include ErrorRescueHelper
   include CurrentUserHelper
   include SentryHelper
   include PrettyUrlHelper
@@ -25,14 +24,67 @@ class ApplicationController < ActionController::Base
   helper_method :supported_locales
   helper_method :is_old_browser?
 
-  after_action :associate_user_to_visit
+  skip_before_action :verify_authenticity_token, only: :bug_tunnel
+  caches_page :sitemap
+
+  rescue_from(ActionController::UnknownFormat) do
+    respond_with_error message: :"errors.not_found", status: 404
+  end
+
+  rescue_from(ActionView::MissingTemplate)  do |exception|
+    raise exception unless %w[txt text gif png].include?(params[:format])
+  end
+
+  rescue_from(ActiveRecord::RecordNotFound) do
+    respond_with_error message: :"errors.not_found", status: 404
+  end
+
+  rescue_from(Membership::InvitationAlreadyUsed) do |exception|
+    session.delete(:pending_membership_token)
+    if current_user.ability.can?(:show, exception.membership.group)
+      redirect_to polymorphic_path(exception.membership.group) || dashboard_path
+    else
+      respond_with_error message: :"invitation.invitation_already_used"
+    end
+  end
+
+  rescue_from(CanCan::AccessDenied) do |exception|
+    if current_user.is_logged_in?
+      flash[:error] = t("error.access_denied")
+      redirect_to dashboard_path
+    else
+      authenticate_user!
+    end
+  end
+
+  def response_format
+    params[:format] == 'json' ? :json : :html
+  end
+
+  def respond_with_error(message: nil, status: 400)
+    @title = t("errors.#{status}.body")
+    @body = t(message || "errors.#{status}.body")
+    render "application/error", layout: 'basic', status: status, formats: response_format
+  end
 
   def index
     boot_app
   end
 
+  def sitemap
+    @entries = []
+    Group.published.where(is_visible_to_public: true).each do |g|
+      @entries << [url_for(g), g.updated_at.to_date.iso8601]
+    end
+
+    Discussion.visible_to_public.joins(:group).where('groups.archived_at is null').each do |d|
+      @entries << [url_for(d), d.last_activity_at.to_date.iso8601]
+    end
+  end
+
   def show
     resource = ModelLocator.new(resource_name, params).locate!
+    @recipient = current_user
     if current_user.can? :show, resource
       assign_resource
       @pagination = pagination_params
@@ -51,8 +103,33 @@ class ApplicationController < ActionController::Base
   end
 
   def brand
-    @files = Dir.glob('public/theme/*')
     render layout: 'basic'
+  end
+
+  def bug_tunnel
+    raise "no sentry dsn" unless ENV['SENTRY_PUBLIC_DSN']
+
+    uri = URI(ENV['SENTRY_PUBLIC_DSN'])
+    known_host = uri.host
+    known_project_id = uri.path.tr('/', '')
+
+    envelope = request.body.read
+    piece = envelope.split("\n").first
+    header = JSON.parse(piece)
+    dsn = URI.parse(header['dsn'])
+    project_id = dsn.path.tr('/', '')
+
+    raise "Invalid sentry hostname: #{dsn.hostname}" if dsn.hostname != known_host
+    raise "Invalid sentry project id: #{project_id}" if project_id != known_project_id
+
+    upstream_sentry_url = "https://#{known_host}/api/#{known_project_id}/envelope/"
+    Net::HTTP.post(URI(upstream_sentry_url), envelope)
+
+    head(:ok)
+  rescue => e
+    # handle exception in your preferred style,
+    # e.g. by logging or forwarding to server Sentry project
+    Rails.logger.error('error tunneling to sentry')
   end
 
   def ok
@@ -61,7 +138,8 @@ class ApplicationController < ActionController::Base
 
   protected
   def pagination_params
-    { limit: params.fetch(:limit, 100).to_i, offset: params.fetch(:offset, 0).to_i }
+    default_limit = (params[:export]) ? 2000 : 10
+    { limit: params.fetch(:limit, default_limit).to_i, offset: params.fetch(:offset, 0).to_i }
   end
 
   def prevent_caching
@@ -85,13 +163,7 @@ class ApplicationController < ActionController::Base
   def boot_app(status: 200)
     expires_now
     prevent_caching
-    template = File.read(Rails.root.join('public/blient/vue/index.html'))
-
-    if request.format.html?
-      template.gsub!('<div class=upgrade-browser></div>', '<%= render "application/upgrade_browser" %>')
-    end
-
-    render inline: template, layout: false, status: status
+    render file: Rails.root.join('public/blient/index.html'), layout: false, status: status
   end
 
   def redirect_to(url, opts = {})
@@ -107,11 +179,6 @@ class ApplicationController < ActionController::Base
   end
 
   def is_old_browser?
-    (browser.ie? ||
-    (browser.chrome?  && browser.version.to_i < 50) ||
-    (browser.firefox? && !browser.platform.ios? && browser.version.to_i < 50) ||
-    (browser.safari?  && browser.version.to_i < 12) ||
-    (browser.edge?    && browser.version.to_i < 19))
+    browser.ie? || (browser.safari? && browser.version.to_i < 12)
   end
-
 end

@@ -65,6 +65,10 @@ module PendingActionsHelper
     LoginToken.find_by(token: session[:pending_login_token]) if session[:pending_login_token]
   end
 
+  def pending_invitation
+    pending_membership || pending_discussion_reader || pending_stance
+  end
+
   def pending_membership_token
     params[:membership_token] || session[:pending_membership_token]
   end
@@ -86,7 +90,7 @@ module PendingActionsHelper
   end
 
   def pending_stance
-    Stance.redeemable.find_by(token: pending_stance_token) if pending_stance_token
+    Stance.find_by(token: pending_stance_token) if pending_stance_token
   end
 
   def pending_identity

@@ -6,12 +6,11 @@ class User < ApplicationRecord
   include HasAvatar
   include SelfReferencing
   include NoForbiddenEmails
-  include HasMailer
   include CustomCounterCache::Model
   include HasRichText
   include LocalesHelper
 
-  is_rich_text    on: :short_bio
+  is_rich_text on: :short_bio
 
   extend HasTokens
   extend HasDefaults
@@ -19,15 +18,12 @@ class User < ApplicationRecord
   extend NoSpam
   no_spam_for :name, :email
 
-  has_paper_trail only: [:email_newsletter]
+  has_paper_trail only: [:name, :username, :email, :email_newsletter, :deactivated_at, :deactivator_id]
 
   MAX_AVATAR_IMAGE_SIZE_CONST = 100.megabytes
-  BOT_EMAILS = {
-    helper_bot: ENV['HELPER_BOT_EMAIL'] || 'contact@loomio.org',
-    demo_bot:   ENV['DEMO_BOT_EMAIL'] || 'contact+demo@loomio.org'
-  }.freeze
 
   devise :database_authenticatable, :recoverable, :registerable, :rememberable, :lockable, :trackable
+  devise :pwned_password if Rails.env.production?
   attr_accessor :recaptcha
   attr_accessor :restricted
   attr_accessor :token
@@ -50,20 +46,11 @@ class User < ApplicationRecord
   validates :legal_accepted,     presence: true, if: :require_legal_accepted
   validate  :validate_recaptcha,                 if: :require_recaptcha
 
-  has_attached_file :uploaded_avatar,
-    styles: {
-      small:  "#{AVATAR_SIZES[:small]}x#{AVATAR_SIZES[:small]}#",
-      medium: "#{AVATAR_SIZES[:medium]}x#{AVATAR_SIZES[:medium]}#",
-      large:  "#{AVATAR_SIZES[:large]}x#{AVATAR_SIZES[:large]}#",
-    }
-
-  validates_attachment :uploaded_avatar,
-    size: { in: 0..MAX_AVATAR_IMAGE_SIZE_CONST.kilobytes },
-    content_type: { content_type: /\Aimage/ }
+  has_one_attached :uploaded_avatar
 
   validates_uniqueness_of :email, conditions: -> { where(email_verified: true) }, if: :email_verified?
-  validates_uniqueness_of :username, if: :email_verified
-  before_validation :generate_username, if: :email_verified
+  validates_uniqueness_of :username, if: :email
+  before_validation :generate_username, if: :email
   validates_length_of :name, maximum: 100
   validates_length_of :username, maximum: 30
   validates_length_of :short_bio, maximum: 5000
@@ -71,27 +58,13 @@ class User < ApplicationRecord
   validates_confirmation_of :password, if: :password_required?
 
   validates_length_of :password, minimum: 8, allow_nil: true
-  validates :password, nontrivial_password: true, allow_nil: true
 
   has_many :admin_memberships,
-           -> { where('memberships.admin = ?', true) },
+           -> { where('memberships.admin': true, revoked_at: nil) },
            class_name: 'Membership'
 
-  has_many :memberships, -> { where(archived_at: nil) }, dependent: :destroy
+  has_many :memberships, -> { active }, dependent: :destroy
   has_many :all_memberships, dependent: :destroy, class_name: "Membership"
-
-  has_many :archived_memberships,
-           -> { where('archived_at IS NOT NULL') },
-           class_name: 'Membership'
-
-  has_many :invited_memberships,
-           class_name: 'Membership',
-           foreign_key: :inviter_id
-
-  has_many :groups,
-           through: :memberships,
-           class_name: 'Group',
-           source: :group
 
   has_many :adminable_groups,
            -> { where(archived_at: nil) },
@@ -121,7 +94,10 @@ class User < ApplicationRecord
   has_many :group_polls, through: :groups, source: :polls
 
   has_many :discussion_readers, dependent: :destroy
-  has_many :guest_discussions, -> { DiscussionReader.guests}, through: :discussion_readers, source: :discussion
+  has_many :guest_discussion_readers, -> { DiscussionReader.active.guests }, class_name: 'DiscussionReader', dependent: :destroy
+  has_many :guest_discussions, through: :guest_discussion_readers, source: :discussion
+  has_many :guest_stances, -> { Stance.latest.guests }, class_name: 'Stance', dependent: :destroy, foreign_key: :participant_id
+  has_many :guest_polls, through: :guest_stances, source: :poll
   has_many :notifications, dependent: :destroy
   has_many :comments, dependent: :destroy
   has_many :documents, foreign_key: :author_id, dependent: :destroy
@@ -133,12 +109,12 @@ class User < ApplicationRecord
   before_save :set_avatar_initials
   initialized_with_token :unsubscribe_token,        -> { Devise.friendly_token }
   initialized_with_token :email_api_key,            -> { SecureRandom.hex(16) }
+  initialized_with_token :api_key,                  -> { SecureRandom.hex(16) }
 
   enum default_membership_volume: [:mute, :quiet, :normal, :loud]
 
   scope :active, -> { where(deactivated_at: nil) }
-  scope :inactive, -> { where("deactivated_at IS NOT NULL") }
-  scope :email_catch_up, -> { active.verified.where(email_catch_up: true) }
+  scope :deactivated, -> { where("deactivated_at IS NOT NULL") }
   scope :sorted_by_name, -> { order("lower(name)") }
   scope :admins, -> { where(is_admin: true) }
   scope :coordinators, -> { joins(:memberships).where('memberships.admin = ?', true).group('users.id') }
@@ -146,14 +122,30 @@ class User < ApplicationRecord
   scope :unverified, -> { where(email_verified: false) }
   scope :search_for, -> (q) { where("users.name ilike :first OR users.name ilike :other OR users.username ilike :first OR users.email ilike :first", first: "#{q}%", other:  "% #{q}%") }
   scope :visible_by, -> (user) { distinct.active.verified.joins(:memberships).where("memberships.group_id": user.group_ids).where.not(id: user.id) }
+  scope :humans, -> { where(bot: false) }
+  scope :bots, -> { where(bot: true) }
 
   scope :mention_search, -> (user, model, query) do
     return self.none unless model.present?
-    active.verified.search_for(query).
-      joins("LEFT OUTER JOIN memberships m ON m.user_id = users.id AND m.group_id = #{model.group_id || 0}").
-      joins("LEFT OUTER JOIN discussion_readers dr ON dr.user_id = users.id AND dr.discussion_id = #{model.discussion_id || 0}").
-      where("(m.id IS NOT NULL AND m.archived_at IS NULL) OR
-             (dr.id IS NOT NULL AND dr.inviter_id IS NOT NULL AND dr.revoked_at IS NULL)")
+    ids = []
+
+    if model.group_id
+      ids += Membership.active.where(group_id: model.group_id).pluck(:user_id) if model.group_id
+    end
+
+    if model.discussion_id
+      ids += DiscussionReader.active.guests.where(discussion_id: model.discussion_id).pluck(:user_id)
+    end
+
+    if model.poll_id
+      ids += Stance.latest.guests.where(poll_id: model.poll_id).pluck(:participant_id)
+    end
+
+    if model.respond_to?(:poll_ids) and model.poll_ids.any?
+      ids += Stance.latest.guests.where(poll_id: model.poll_ids).pluck(:participant_id)
+    end
+
+    active.search_for(query).where(id: ids)
   end
 
   scope :email_when_proposal_closing_soon, -> { active.where(email_when_proposal_closing_soon: true) }
@@ -172,9 +164,21 @@ class User < ApplicationRecord
     end
   end
 
+  def date_time_pref
+    self[:date_time_pref] || 'day_abbr'
+  end
+
+  def author
+    self
+  end
+
   def is_paying?
     group_ids = self.group_ids.concat(self.groups.pluck(:parent_id).compact).uniq
     Group.where(id: group_ids).where(parent_id: nil).joins(:subscription).where.not('subscriptions.plan': 'trial').exists?
+  end
+
+  def is_paying
+    is_paying?
   end
 
   def invitations_rate_limit
@@ -183,6 +187,13 @@ class User < ApplicationRecord
     else
       ENV.fetch('TRIAL_INVITATIONS_RATE_LIMIT', 500)
     end.to_i
+  end
+
+  def browseable_group_ids
+    Group.where(
+      "id in (:group_ids) OR
+      (parent_id in (:group_ids) AND is_visible_to_parent_members = TRUE)",
+      group_ids: self.group_ids).pluck(:id)
   end
 
   def set_legal_accepted_at
@@ -212,7 +223,7 @@ class User < ApplicationRecord
     end
 
     update(name: identity.name) if self.name.nil?
-    identity.assign_logo! if self.avatar_url.nil?
+    identity.assign_logo! unless self.avatar_url
     self
   end
 
@@ -268,34 +279,31 @@ class User < ApplicationRecord
   end
 
   def time_zone
+    return 'UTC' if self[:time_zone] == "Etc/Unknown"
     self[:time_zone] || 'UTC'
   end
 
   def self.helper_bot
-    verified.find_by(email: BOT_EMAILS[:helper_bot]) ||
-    create!(email: BOT_EMAILS[:helper_bot],
+    verified.find_by(email: BaseMailer::NOTIFICATIONS_EMAIL_ADDRESS) ||
+    create!(email: BaseMailer::NOTIFICATIONS_EMAIL_ADDRESS,
             name: 'Loomio Helper Bot',
             password: SecureRandom.hex(20),
             email_verified: true,
-            avatar_kind: :gravatar)
-  end
-
-  def self.demo_bot
-    verified.find_by(email: BOT_EMAILS[:helper_bot]) ||
-    create!(email: BOT_EMAILS[:demo_bot],
-            name: 'Loomio Demo bot',
-            email_verified: true,
+            bot: true,
             avatar_kind: :gravatar)
   end
 
   def name
-    if deactivated_at.present?
-      "[deactivated account]"
+    if deactivated_at && self[:name].nil?
+      I18n.t('profile_page.deleted_account')
     else
       self[:name]
     end
   end
 
+  def name_or_username
+    self[:name] || self[:username]
+  end
 
   # http://stackoverflow.com/questions/5140643/how-to-soft-delete-user-with-devise/8107966#8107966
   def active_for_authentication?
@@ -318,6 +326,54 @@ class User < ApplicationRecord
     I18n.with_locale(locale) { devise_mailer.send(notification, self, *args).deliver_now }
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    [
+    "avatar_initials",
+    "avatar_kind",
+    "city",
+    "content_locale",
+    "country",
+    "created_at",
+    "current_sign_in_at",
+    "current_sign_in_ip",
+    "date_time_pref",
+    "deactivated_at",
+    "detected_locale",
+    "email",
+    "email_catch_up",
+    "email_catch_up_day",
+    "email_newsletter",
+    "email_on_participation",
+    "email_verified",
+    "email_when_mentioned",
+    "email_when_proposal_closing_soon",
+    "id",
+    "is_admin",
+    "key",
+    "last_seen_at",
+    "last_sign_in_at",
+    "last_sign_in_ip",
+    "legal_accepted_at",
+    "link_previews",
+    "location",
+    "locked_at",
+    "memberships_count",
+    "name",
+    "region",
+    "secret_token",
+    "selected_locale",
+    "short_bio",
+    "short_bio_format",
+    "sign_in_count",
+    "time_zone",
+    "updated_at",
+    "uploaded_avatar_content_type",
+    "uploaded_avatar_file_name",
+    "uploaded_avatar_file_size",
+    "uploaded_avatar_updated_at",
+    "username"]
+  end
+
   protected
 
   def password_required?
@@ -329,7 +385,7 @@ class User < ApplicationRecord
   def validate_recaptcha
     return unless ENV['RECAPTCHA_APP_KEY']
     return if Clients::Recaptcha.instance.validate(self.recaptcha)
-    Sentry.capture_message("recaptcha failed", extra: {email: email})
+    # Sentry.capture_message("recaptcha failed", extra: {email: email})
     self.errors.add(:recaptcha, I18n.t(:"user.error.recaptcha"))
   end
 end

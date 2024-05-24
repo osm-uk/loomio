@@ -1,33 +1,46 @@
-<script lang="coffee">
-import AppConfig       from '@/shared/services/app_config'
-import Session         from '@/shared/services/session'
-import Records         from '@/shared/services/records'
-import UserHelpService from '@/shared/services/user_help_service'
-import Flash from '@/shared/services/flash'
+<script lang="js">
+import AppConfig       from '@/shared/services/app_config';
+import Session         from '@/shared/services/session';
+import Records         from '@/shared/services/records';
+import Flash from '@/shared/services/flash';
 
-export default
-  methods:
-    togglePinned: ->
-      if @user.experiences['sidebar']
-        Records.users.removeExperience('sidebar')
-      else
-        Records.users.saveExperience('sidebar')
+export default {
+  methods: {
+    togglePinned() {
+      if (this.user.experiences['sidebar']) {
+        return Records.users.saveExperience('sidebar', false);
+      } else {
+        return Records.users.saveExperience('sidebar', true);
+      }
+    },
 
-    toggleBeta: ->
-      if @user.experiences['betaFeatures']
-        Records.users.removeExperience('betaFeatures')
-      else
-        Records.users.saveExperience('betaFeatures')
-        Flash.success("user_dropdown.beta_collab")
+    toggleDark() {
+      if (this.isDark) {
+        Records.users.saveExperience('darkMode', false);
+        return this.$vuetify.theme.dark = false;
+      } else {
+        Records.users.saveExperience('darkMode', true);
+        return this.$vuetify.theme.dark = true;
+      }
+    },
 
-    signOut: ->
-      Session.signOut()
+    defaultDark() {
+      return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    },
 
-  computed:
-    siteName: -> AppConfig.theme.site_name
-    user:     -> Session.user()
-    helpLink: -> UserHelpService.helpLink()
-    showHelp: -> AppConfig.features.app.help_link
+    signOut() {
+      return Session.signOut();
+    }
+  },
+
+  computed: {
+    isDark() { return this.$vuetify.theme.dark; },
+    version() { return AppConfig.version; },
+    release() { return AppConfig.release; },
+    siteName() { return AppConfig.theme.site_name; },
+    user() { return Session.user(); }
+  }
+};
 
 </script>
 
@@ -36,37 +49,35 @@ div.user-dropdown
   v-list-item(v-if="!user.experiences['sidebar']" @click="togglePinned" dense)
       v-list-item-title(v-t="'user_dropdown.pin_sidebar'")
       v-list-item-icon
-        v-icon mdi-pin
+        common-icon(name="mdi-pin")
   v-list-item(v-if="user.experiences['sidebar']" @click="togglePinned" dense)
       v-list-item-title(v-t="'user_dropdown.unpin_sidebar'")
       v-list-item-icon
-        v-icon mdi-pin-off
-  v-list-item(v-if="!user.experiences['betaFeatures']" @click="toggleBeta" dense)
-      v-list-item-title(v-t="'user_dropdown.enable_beta_features'")
-      v-list-item-icon
-        v-icon mdi-flask-outline
-  v-list-item(v-if="user.experiences['betaFeatures']" @click="toggleBeta" dense)
-      v-list-item-title(v-t="'user_dropdown.disable_beta_features'")
-      v-list-item-icon
-        v-icon mdi-flask-empty-off-outline
+        common-icon(name="mdi-pin-off")
   v-list-item.user-dropdown__list-item-button--profile(to="/profile" dense)
     v-list-item-title(v-t="'user_dropdown.edit_profile'")
     v-list-item-icon
-      v-icon mdi-account
+      common-icon(name="mdi-account")
   v-list-item.user-dropdown__list-item-button--email-settings(to="/email_preferences" dense)
     v-list-item-title(v-t="'user_dropdown.email_settings'")
     v-list-item-icon
-      v-icon mdi-cog-outline
-  v-list-item(v-if="showHelp", :href="helpLink", target="_blank" dense)
-    v-list-item-title(v-t="'user_dropdown.help'")
-    v-list-item-icon
-      v-icon mdi-help-circle-outline
-  v-list-item(to="/contact" dense)
-    v-list-item-title(v-t="{path: 'user_dropdown.contact_site_name', args: {site_name: siteName}}")
-    v-list-item-icon
-      v-icon mdi-email-outline
+      common-icon(name="mdi-cog-outline")
+  v-list-item(v-if="!isDark" @click="toggleDark" dense)
+      v-list-item-title(v-t="'user_dropdown.enable_dark_mode'")
+      v-list-item-icon
+        common-icon(name="mdi-weather-night")
+  v-list-item(v-if="isDark" @click="toggleDark" dense)
+      v-list-item-title(v-t="'user_dropdown.disable_dark_mode'")
+      v-list-item-icon
+        common-icon(name="mdi-white-balance-sunny")
   v-list-item(@click="signOut()" dense)
     v-list-item-title(v-t="'user_dropdown.sign_out'")
     v-list-item-icon
-      v-icon mdi-exit-to-app
+      common-icon(name="mdi-exit-to-app")
+  v-list-item(href="https://github.com/loomio/loomio/releases" target="_blank" dense :title="release")
+    v-list-item-title.text--secondary
+      span(v-t="'common.version'")
+      space
+      span {{version}}
+
 </template>

@@ -1,5 +1,4 @@
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 module.exports = {
   'lets_you_update_email_settings_while_logged_in': (test) => {
@@ -28,7 +27,7 @@ module.exports = {
 }
 
 testUpdate = (page) => {
-  page.click('.email-settings-page__daily-summary label')
+  page.click('.email-settings-page__mentioned label')
   page.click('.email-settings-page__update-button')
   page.expectFlash('Email settings updated')
 }

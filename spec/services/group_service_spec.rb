@@ -1,52 +1,45 @@
 require 'rails_helper'
 
 describe 'GroupService' do
-  let(:user) { create(:user) }
-  let(:group) { build(:group) }
-  let(:guest_group) { build(:guest_group) }
-  let(:parent) { create(:group, default_group_cover: create(:default_group_cover))}
-  let(:subgroup) { build(:group, parent: parent) }
+
+  describe 'invite' do
+    let(:user) { create(:user) }
+    let(:group) { create(:group, name: 'test invite') }
+    let(:subscription) { Subscription.create(max_members: nil) }
+
+    before do
+      group.subscription = subscription
+      group.save!
+    end
+
+    it 'invites a user by email' do
+      expect(group.memberships.count).to eq 1
+      GroupService.invite(group: group, actor: group.creator, params: {recipient_emails: ['test@example.com']})
+      expect(group.memberships.count).to eq 2
+    end
+
+    it 'restricts group to subscription.max_members (single)' do
+      expect(group.memberships.count).to eq 1
+      subscription.update(max_members: 1)
+      expect { GroupService.invite(group: group, actor: group.creator, params: {recipient_emails: ['test@example.com']}) }.to raise_error Subscription::MaxMembersExceeded
+      expect(group.memberships.count).to eq 1
+    end
+
+    it 'restricts group to subscription.max_members (multiple)' do
+      expect(group.memberships.count).to eq 1
+      subscription.update(max_members: 2)
+      expect { GroupService.invite(group: group, actor: group.creator, params: {recipient_emails: ['test@example.com', 'test2@example.com']}) }.to raise_error Subscription::MaxMembersExceeded
+      expect(group.memberships.count).to eq 1
+    end
+  end
 
   describe 'create' do
+    let(:user) { create(:user) }
+    let(:group) { build(:group) }
+
     it 'creates a new group' do
       expect { GroupService.create(group: group, actor: user) }.to change { Group.count }.by(1)
       expect(group.reload.creator).to eq user
-    end
-
-    it 'assigns a default group cover' do
-      default = create(:default_group_cover)
-      GroupService.create(group: group, actor: user)
-      expect(default.cover_photo.url).to match group.reload.cover_photo.url
-    end
-
-    it 'does not assign a default group cover if the group is a subgroup' do
-      parent.add_admin! user
-      GroupService.create(group: subgroup, actor: user)
-      expect(subgroup.reload.default_group_cover).to be_blank
-      expect(subgroup.reload.cover_photo.url).to eq parent.reload.cover_photo.url
-    end
-
-    it 'does not assign a default group cover if none have been defined' do
-      GroupService.create(group: group, actor: user)
-      expect(group.reload.cover_photo).to be_blank
-    end
-
-    it 'does not send excessive emails' do
-      expect { GroupService.create(group: group, actor: user) }.to_not change { ActionMailer::Base.deliveries.count }
-    end
-
-
-    context "is_referral" do
-      it "is false for first group" do
-        GroupService.create(group: group, actor: user)
-        expect(group.is_referral).to be false
-      end
-
-      it "is true for second group" do
-        create(:group).add_admin! user
-        GroupService.create(group: group, actor: user)
-        expect(group.is_referral).to be true
-      end
     end
   end
 
@@ -64,7 +57,7 @@ describe 'GroupService' do
     end
 
     it 'does not allow nonadmins to move groups' do
-      expect { GroupService.move(group: group, parent: parent, actor: user) }.to raise_error { CanCan::AccessDenied }
+      expect { GroupService.move(group: group, parent: parent, actor: user) }.to raise_error CanCan::AccessDenied
     end
   end
 
@@ -80,7 +73,6 @@ describe 'GroupService' do
     let!(:source_comment) { create :comment, discussion: source_discussion }
     let!(:source_poll) { create :poll, group: source }
     let!(:source_stance) { create :stance, poll: source_poll }
-    let!(:source_identity) { create :group_identity, group: source }
     let!(:source_request) { create :membership_request, group: source }
 
     before do
@@ -101,7 +93,6 @@ describe 'GroupService' do
 
       expect(target.discussions).to         include source_discussion
       expect(target.polls).to               include source_poll
-      expect(target.group_identities).to    include source_identity
       expect(target.membership_requests).to include source_request
 
       expect(source_stance.reload.group).to eq target
@@ -112,7 +103,7 @@ describe 'GroupService' do
 
     it 'does not allow non-admins to merge' do
       user.update(is_admin: false)
-      expect { GroupService.merge(source: source, target: target, actor: user) }.to raise_error { CanCan::AccessDenied }
+      expect { GroupService.merge(source: source, target: target, actor: user) }.to raise_error CanCan::AccessDenied
     end
   end
 end

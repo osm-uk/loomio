@@ -14,7 +14,7 @@ cmn:
       email: 您输入的不是有效的电子邮件地址
   group:
     stats:
-      members: 成员 ({{count}})
+      members: 成员 (%{count})
       threads: 话题
       comments: 意见
       poll_types:
@@ -26,6 +26,7 @@ cmn:
     export:
       percent_voted: "%{num}/%{denom} (%{percent}) 的成员已经表达了他们的立场"
       title: 标题
+      email: 电子邮件
       participants: 参与者
       details: 细节
       group_name: 群组名称
@@ -47,8 +48,4 @@ cmn:
     public_groups: 公共组团
   poll_mailer:
     common:
-      or: 或者
-      unsubscribe: 取消订阅
       create_outcome: 分享成果
-  poll_unsubscribe:
-    go_to_dashboad: 访问仪表板

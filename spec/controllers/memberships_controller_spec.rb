@@ -7,7 +7,7 @@ describe MembershipsController do
   let(:another_user) { FactoryBot.create(:user) }
 
   describe 'redeem' do
-    let(:membership) { create :membership, group: group }
+    let(:membership) { create :membership, group: group, accepted_at: nil }
 
     before do
       session[:pending_membership_token] = membership.token
@@ -28,7 +28,7 @@ describe MembershipsController do
 
     it "multiple pending memberships - same org same user" do
       subgroup = create(:group, parent: membership.group)
-      subgroup_membership = create(:membership, group: subgroup, user: membership.user)
+      subgroup_membership = create(:membership, group: subgroup, user: membership.user, accepted_at: nil)
       expect {get :consume}.to change { Event.count }.by(1)
       expect(response.status).to eq 200
       membership.reload
@@ -44,9 +44,7 @@ describe MembershipsController do
       expect(membership.accepted_at).to eq nil
       expect {get :consume}.to_not change { Event.count }
       expect(response.status).to eq 200
-      membership.reload
-      expect(membership.accepted_at).to eq nil
-      expect(membership.user_id).to_not eq user.id
+      expect(Membership.where(id: membership.id).exists?).to be false
     end
 
     it "does not redeem accepted membership" do
@@ -67,7 +65,7 @@ describe MembershipsController do
   end
 
   describe "GET 'show'" do
-    let(:membership) { create(:membership, token: 'abc', group: group, user: user) }
+    let(:membership) { create(:membership, accepted_at: nil, token: 'abc', group: group, user: user) }
 
     context 'membership not found' do
       it 'renders error page with not found message' do
@@ -90,7 +88,6 @@ describe MembershipsController do
     end
 
     context 'with an associated identity' do
-      before { group.group_identities.create(identity: create(:slack_identity)) }
 
       it 'redirects to the group if a member' do
         group.add_member! another_user

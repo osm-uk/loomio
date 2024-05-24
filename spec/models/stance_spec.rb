@@ -21,31 +21,24 @@ describe Stance do
 
   describe 'statement' do
     it 'has a length validation' do
-      expect(build(:stance, reason: "a"*600)).to_not be_valid
+      expect(build(:stance, reason: "a"*505, cast_at: Time.now)).to_not be_valid
     end
   end
 
   describe 'choice shorthand' do
-    let(:poll) { Poll.create!(poll_type: 'poll', title: 'which pet?', poll_option_names: %w[dog cat], closing_at: 1.day.from_now, author: author)}
+    let(:poll) { Poll.create!(poll_type: 'poll', maximum_stance_choices: 2, title: 'which pet?', poll_option_names: %w[dog cat], closing_at: 1.day.from_now, author: author)}
     let(:author) { FactoryBot.create(:user) }
 
     it "string" do
-      Stance.create(poll: poll, participant: author, choice: 'dog')
-      poll.update_stance_data
-      expect(poll.stance_data).to eq({'dog' => 1, 'cat' => 0})
+      stance = Stance.create(poll: poll, participant: author, choice: 'dog')
+      poll.update_counts!
+      expect(poll.stance_counts).to eq([1,0])
     end
 
     it "array" do
-      Stance.create(poll: poll, participant: author, choice: ['dog', 'cat'])
-      poll.update_stance_data
-      expect(poll.stance_data).to eq({'dog' => 1, 'cat' => 1})
-    end
-
-    # TODO: when we have poll types which accept alternate scores, update this test to test that.
-    it "map" do
-      Stance.create(poll: poll, participant: author, choice: {'dog' => 1, 'cat' => 1})
-      poll.update_stance_data
-      expect(poll.stance_data).to eq({'dog' => 1, 'cat' => 1})
+      stance = Stance.create!(poll: poll, participant: author, choice: ['dog', 'cat'])
+      poll.update_counts!
+      expect(poll.stance_counts).to eq([1,1])
     end
   end
 end

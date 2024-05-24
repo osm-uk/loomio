@@ -1,74 +1,125 @@
-<script lang="coffee">
-import Records from '@/shared/services/records'
-import EventBus from '@/shared/services/event_bus'
-import Session from '@/shared/services/session'
-import Flash  from '@/shared/services/flash'
-import { onError } from '@/shared/helpers/form'
+<script lang="js">
+import Records from '@/shared/services/records';
+import EventBus from '@/shared/services/event_bus';
+import Session from '@/shared/services/session';
+import Flash  from '@/shared/services/flash';
+import PollCommonForm from '@/components/poll/common/form';
+import PollCommonChooseTemplate from '@/components/poll/common/choose_template';
+import { compact } from 'lodash-es'; 
 
-export default
-  data: ->
-    poll: null
+export default {
+  components: {PollCommonForm, PollCommonChooseTemplate},
 
-  created: -> @init()
+  data() {
+    return {
+      loading: false,
+      poll: null,
+      group: null,
+      discussion: null
+    }
+  },
 
-  methods:
-    init: ->
-      Records.polls.findOrFetchById(@$route.params.key)
-      .then (poll) =>
-        @poll = poll.clone()
+  created() {
+    // Sorry everyone, template_id is a poll_id in this case.
+    // After the first release of poll_templates we can start to modify this stuff
+    let discussionId, groupId, templateId;
+    if (templateId = parseInt(this.$route.query.template_id)) {
+      this.loading = true;
+      Records.polls.findOrFetchById(templateId).then(poll => {
+        this.poll = poll.clonePoll();
+        if (Session.user().groupIds().includes(poll.groupId)) {
+          this.poll.groupId = poll.groupId;
+          this.group = this.poll.group();
+        }
+        this.loading = false;
+      });
+    }
 
-        EventBus.$emit 'currentComponent',
-          group: poll.group()
-          poll:  poll
-          title: poll.title
+    if (discussionId = parseInt(this.$route.query.discussion_id)) {
+      this.loading = true;
+      Records.discussions.findOrFetchById(discussionId).then(discussion => {
+        this.discussion = discussion;
+        this.group = discussion.group();
+        this.loading = false;
+      });
+    }
+
+    if (groupId = parseInt(this.$route.query.group_id)) {
+      this.loading = true;
+      Records.groups.findOrFetchById(groupId).then(group => {
+        this.group = group;
+        this.loading = false;
+      });
+    }
+
+    if (this.$route.params.key) {
+      this.loading = true;
+      Records.polls.findOrFetchById(this.$route.params.key).then(poll => {
+        this.poll = poll.clone();
+        EventBus.$emit('currentComponent', {
+          group: poll.group(),
+          poll,
+          title: poll.title,
           page: 'pollFormPage'
+        });
+        this.loading = false;
+      }).catch(function(error) {
+        EventBus.$emit('pageError', error);
+        if ((error.status === 403) && !Session.isSignedIn()) {
+          EventBus.$emit('openAuthModal');
+        }
+      });
+    }
+  },
 
-      .catch (error) ->
-        EventBus.$emit 'pageError', error
-        EventBus.$emit 'openAuthModal' if error.status == 403 && !Session.isSignedIn()
+  methods: {
+    setPoll(poll) {
+      return this.poll = poll;
+    }
+  },
 
-    submit: ->
-      actionName = if @poll.isNew() then 'created' else 'updated'
-      @poll.customFields.can_respond_maybe = @poll.canRespondMaybe if @poll.pollType == 'meeting'
-      @poll.setErrors({})
-      @poll.save()
-      .then (data) =>
-        pollKey = data.polls[0].key
-        Records.polls.findOrFetchById(pollKey, {}, true).then (poll) =>
-          @$router.replace(@urlFor(poll))
-          Flash.success "poll_#{poll.pollType}_form.#{poll.pollType}_#{actionName}"
-      .catch onError(@poll)
-
-  computed:
-    title_key: ->
-      mode = if @poll.isNew()
-        'start'
-      else
-        'edit'
-      'poll_' + @poll.pollType + '_form.'+mode+'_header'
-
+  computed: {
+    isLoggedIn() {
+      return Session.isSignedIn();
+    },
+    breadcrumbs() {
+      return compact([this.group.parentId && this.group.parent(), this.group]).map(g => {
+        return {
+          text: g.name,
+          disabled: false,
+          to: this.urlFor(g)
+        };
+      });
+    }
+  }
+};
 
 </script>
 <template lang="pug">
 .poll-form-page
   v-main
-    v-container.max-width-800
-      loading(:until="poll")
-        v-card.poll-common-modal(@keyup.ctrl.enter="submit()" @keydown.meta.enter.stop.capture="submit()" v-if="poll")
-          submit-overlay(:value="poll.processing")
+    v-container.max-width-800.px-0.px-sm-3
+      loading(:until="!loading")
+        div.pa-4.py-0(v-if="group")
+          .d-flex
+            v-breadcrumbs.px-0.pt-0(:items="breadcrumbs")
+              template(v-slot:divider)
+                common-icon(name="mdi-chevron-right")
+        v-card.poll-common-modal(v-if="isLoggedIn")
           v-card-title
-            h1.headline(tabindex="-1" v-t="title_key")
-            v-spacer
-            v-btn(icon :to="urlFor(poll)" aria-hidden='true')
-              v-icon mdi-close
-          div.pa-4
-            poll-common-directive(:poll='poll' name='form')
-          v-card-actions.poll-common-form-actions
-            v-spacer
-            v-btn.poll-common-form__submit(color="primary" @click='submit()' v-if='!poll.isNew()' :loading="poll.processing")
-              span(v-t="'common.action.save_changes'")
-            v-btn.poll-common-form__submit(color="primary" @click='submit()' v-if='poll.closingAt && poll.isNew() && poll.groupId' :loading="poll.processing")
-              span(v-t="{path: 'poll_common_form.start_poll_type', args: {poll_type: poll.translatedPollType()}}")
-            v-btn.poll-common-form__submit(color="primary" @click='submit()' v-if='!poll.closingAt && poll.isNew() && poll.groupId' :loading="poll.processing")
-              span(v-t="{path: 'poll_common_form.start_poll_type', args: {poll_type: poll.translatedPollType()}}")
+            h1.text-h5(v-t="'poll_common.decision_templates'")
+
+          poll-common-form.px-4(
+            v-if="poll"
+            :poll="poll"
+            @setPoll="setPoll"
+            redirect-on-save
+          )
+
+          poll-common-choose-template(
+            v-if="!poll"
+            @setPoll="setPoll"
+            :discussion="discussion"
+            :group="group"
+          )
 </template>

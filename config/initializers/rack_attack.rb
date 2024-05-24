@@ -14,40 +14,42 @@ class Rack::Attack
   # throttle('req/ip', limit: 300, period: 5.minutes) do |req|
   #   req.remote_ip
   # end
-
   IP_POST_LIMITS = {
-    announcements: 100,
-    groups: 10,
-    group_surveys: 10,
-    login_tokens: 10,
-    membership_requests: 100,
-    memberships: 100,
-    identities: 10,
-    discussions: 100,
-    polls: 100,
-    outcomes: 100,
-    stances: 100,
-    profile: 100,
-    webhooks: 10,
-    comments: 100,
-    reactions: 100,
-    registrations: 10,
-    sessions: 10,
-    contact_messages: 10,
-    contact_requests: 10,
-    discussion_readers: 1000
+    '/api/v1/trails' => 10,
+    '/api/v1/announcements' => 100,
+    '/api/v1/groups' => 20,
+    '/api/v1/templates' => 10,
+    '/api/v1/login_tokens' => 10,
+    '/api/v1/membership_requests' => 100,
+    '/api/v1/memberships' => 100,
+    '/api/v1/identities' => 10,
+    '/api/v1/discussions' => 100,
+    '/api/v1/polls' => 100,
+    '/api/v1/outcomes' => 100,
+    '/api/v1/stances' => 100,
+    '/api/v1/profile' => 100,
+    '/api/v1/webhooks' => 10,
+    '/api/v1/comments' => 100,
+    '/api/v1/reactions' => 100,
+    '/api/v1/link_previews' => 100,
+    '/api/v1/registrations' => 10,
+    '/api/v1/sessions' => 10,
+    '/api/v1/contact_messages' => 10,
+    '/api/v1/contact_requests' => 10,
+    '/api/v1/discussion_readers' => 1000,
+    '/rails/active_storage/direct_uploads' => 20
   }
 
-  IP_POST_LIMITS.each_pair do |name, limit|
-    throttle("post/ip/hour api/v1/#{name}", limit: limit * RATE_MULTIPLIER, period: (1 * TIME_MULTIPLIER).hour) do |req|
-      req.remote_ip if req.post? && req.path.starts_with?("/api/v1/#{name}")
+  IP_POST_LIMITS.each_pair do |route, limit|
+    throttle("post/ip/hour #{route}", limit: limit * RATE_MULTIPLIER, period: (1 * TIME_MULTIPLIER).hour) do |req|
+      req.remote_ip if (req.post? || req.put? || req.patch?) && req.path.starts_with?(route)
     end
   end
 
   # MAX posts per day is 3 times the posts per hour
-  IP_POST_LIMITS.each_pair do |name, limit|
-    throttle("post/ip/day api/v1/#{name}", limit: limit * 3 * RATE_MULTIPLIER, period: (1 * TIME_MULTIPLIER).day) do |req|
-      req.remote_ip if req.post? && req.path.starts_with?("/api/v1/#{name}")
+  IP_POST_LIMITS.each_pair do |route, limit|
+    throttle("post/ip/day #{route}", limit: limit * 3 * RATE_MULTIPLIER, period: (1 * TIME_MULTIPLIER).day) do |req|
+      req.remote_ip if (req.post? || req.put? || req.patch?) && req.path.starts_with?(route)
     end
   end
 
@@ -57,7 +59,6 @@ class Rack::Attack
                        req.remote_ip,
                        req.request_method,
                        req.fullpath,
-                       request_id,
-                       req.user_agent.to_s.parameterize].join(' ')
+                       request_id].join(' ')
   end
 end

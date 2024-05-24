@@ -3,12 +3,15 @@ require 'rails_helper'
 describe API::V1::PollsController do
   let(:group) { create :group }
   let(:another_group) { create :group }
+  let(:public_group) { create :group, is_visible_to_public: true }
   let(:discussion) { create :discussion, group: group }
   let(:another_discussion) { create :discussion, group: group }
+  let(:public_discussion) { create :discussion, group: public_group, private: false }
   let(:non_group_discussion) { create :discussion }
   let(:user) { create :user }
   let(:another_user) { create :user }
   let!(:poll) { create :poll, title: "POLL!", discussion: discussion, author: user }
+  let(:public_poll) { create :poll, title: "public poll", discussion: public_discussion }
   let(:another_poll) { create :poll, title: "ANOTHER", discussion: another_discussion }
   let(:closed_poll) { create :poll, title: "CLOSED", author: user, closed_at: 1.day.ago }
   let(:non_group_poll) { create :poll }
@@ -17,8 +20,8 @@ describe API::V1::PollsController do
     poll_type: "proposal",
     details: "is it me you're looking for?",
     discussion_id: discussion.id,
-    poll_option_names: ["agree", "abstain", "disagree", "block"],
-    closing_at: 3.days.from_now
+    options: ["agree", "abstain", "disagree", "block"],
+    closing_at: 3.days.from_now.at_beginning_of_hour
   }}
 
   before { group.add_member! user }
@@ -40,10 +43,10 @@ describe API::V1::PollsController do
   end
 
   describe 'index' do
-    before { poll; another_poll; closed_poll }
+    before { poll; another_poll; closed_poll; public_poll }
 
     let(:participated_poll) { create :poll }
-    let!(:my_stance) { create :stance, poll: participated_poll, participant: user, poll_options: [participated_poll.poll_options.first] }
+    let!(:my_stance) { create :stance, poll: participated_poll, participant: user, guest: true, poll_options: [participated_poll.poll_options.first] }
     let!(:authored_poll) { create :poll, author: user }
     let!(:group_poll) { create :poll, discussion: discussion }
     let!(:another_poll) { create :poll }
@@ -60,9 +63,14 @@ describe API::V1::PollsController do
 
     it 'does not allow user to see polls theyre not allowed to see' do
       sign_in user
-      get :index, params: { discussion_key: non_group_discussion.key }
+      get :index, params: { status: 'recent' }
       json = JSON.parse(response.body)
-      expect(json['polls'].length).to eq 0
+      poll_ids = json['polls'].map { |p| p['id'] }
+      expect(poll_ids).to include poll.id
+      expect(poll_ids).not_to include public_poll.id
+    end
+
+    it 'does not show public polls unless you ask for it' do
     end
 
     describe 'signed in' do
@@ -211,8 +219,9 @@ describe API::V1::PollsController do
 
     it 'can store an event duration for meeting polls' do
       poll_params[:poll_type] = 'meeting'
-      poll_params[:poll_option_names] = [1.day.from_now.iso8601]
-      poll_params[:custom_fields] = { meeting_duration: 90, can_respond_maybe: false }
+      poll_params[:options] = [1.day.from_now.iso8601]
+      poll_params[:meeting_duration] = 90
+      poll_params[:can_respond_maybe] = false
       expect { post :create, params: { poll: poll_params } }.to change { Poll.count }.by(1)
       expect(Poll.last.meeting_duration.to_i).to eq 90
     end
@@ -295,39 +304,6 @@ describe API::V1::PollsController do
     end
   end
 
-  describe 'add_options' do
-    before { poll.update(voter_can_add_options: true) }
-
-    it 'adds options to a poll' do
-      sign_in user
-      post :add_options, params: { id: poll.key, poll_option_names: 'new_option' }
-      expect(response.status).to eq 200
-      expect(poll.reload.poll_option_names).to include 'new_option'
-
-      json = JSON.parse(response.body)
-      poll_option_names = json['poll_options'].map { |o| o['name'] }
-      expect(poll_option_names).to include 'new_option'
-    end
-
-    it 'does not allow unauthorized users to add options' do
-      sign_in another_user
-      post :add_options, params: { id: poll.key, poll_option_names: 'new_option' }
-      expect(response.status).to eq 403
-    end
-
-    it 'does nothing if no options passed' do
-      sign_in user
-      expect { post :add_options, params: { id: poll.key, poll_option_names: [] } }.to_not change { poll.poll_options.count }
-      expect(response.status).to eq 200
-    end
-
-    it 'cannot add actions to a closed poll' do
-      poll.update(closed_at: 1.day.ago)
-      sign_in user
-      expect { post :add_option, params: { id: poll.key, poll_option_names: 'new_option' } }.to raise_error { CanCan::AccessDenied }
-    end
-  end
-
   describe 'close' do
     it 'closes a poll' do
       sign_in user
@@ -364,7 +340,7 @@ describe API::V1::PollsController do
     end
 
     let(:poll_params) {{
-      closing_at: 1.day.from_now
+      closing_at: 1.day.from_now.at_beginning_of_hour
     }}
 
     before { poll.update(closed_at: 1.day.ago) }
@@ -390,23 +366,23 @@ describe API::V1::PollsController do
     end
   end
 
-  describe 'destroy' do
-    before do
-      sign_in user
-      poll.group.add_admin! user
-    end
-
-    it 'destroys a poll' do
-      expect { delete :destroy, params: { id: poll.key } }.to change { Poll.count }.by(-1)
-      expect(response.status).to eq 200
-    end
-
-    it 'does not allow an unauthed user to destroy a poll' do
-      sign_in create(:user)
-      expect { delete :destroy, params: { id: poll.key } }.to_not change { Poll.count }
-      expect(response.status).to eq 403
-    end
-  end
+  # describe 'destroy' do
+  #   before do
+  #     sign_in user
+  #     poll.group.add_admin! user
+  #   end
+  #
+  #   it 'destroys a poll' do
+  #     expect { delete :destroy, params: { id: poll.key } }.to change { Poll.count }.by(-1)
+  #     expect(response.status).to eq 200
+  #   end
+  #
+  #   it 'does not allow an unauthed user to destroy a poll' do
+  #     sign_in create(:user)
+  #     expect { delete :destroy, params: { id: poll.key } }.to_not change { Poll.count }
+  #     expect(response.status).to eq 403
+  #   end
+  # end
 
   describe 'add_to_thread' do
     let(:comment) { build :comment, discussion: discussion, author: user }

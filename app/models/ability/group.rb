@@ -26,12 +26,12 @@ module Ability::Group
          :destroy,
          :publish,
          :export,
-         :view_pending_invitations,
-         :set_saml_provider], ::Group do |group|
+         :view_pending_invitations], ::Group do |group|
       group.admins.exists?(user.id)
     end
 
     can [:members_autocomplete,
+         :show_chatbots,
          :set_volume], ::Group do |group|
       user.email_verified? && group.members.exists?(user.id)
     end
@@ -51,8 +51,11 @@ module Ability::Group
          :invite_people,
          :announce,
          :manage_membership_requests], ::Group do |group|
-      user.email_verified? && Subscription.for(group).is_active? && !group.has_max_members &&
-      ((group.members_can_add_members? && group.members.exists?(user.id)) || group.admins.exists?(user.id))
+      user.is_admin ||
+      (
+        ((group.members_can_add_members? && group.members.exists?(user.id)) ||
+         group.admins.exists?(user.id))
+      )
     end
 
     can [:notify], ::Group do |group|

@@ -1,5 +1,6 @@
 class API::V1::SnorlaxBase < ActionController::Base
   rescue_from(CanCan::AccessDenied)                    { |e| respond_with_standard_error e, 403 }
+  rescue_from(Subscription::MaxMembersExceeded)        { |e| respond_with_standard_error e, 403 }
   rescue_from(ActionController::UnpermittedParameters) { |e| respond_with_standard_error e, 400 }
   rescue_from(ActionController::ParameterMissing)      { |e| respond_with_standard_error e, 400 }
   rescue_from(ActiveRecord::RecordNotFound)            { |e| respond_with_standard_error e, 404 }
@@ -21,18 +22,10 @@ class API::V1::SnorlaxBase < ActionController::Base
     create_response
   end
 
-  def create_action
-    resource.save
-  end
-
   def update
     load_resource
     update_action
     update_response
-  end
-
-  def update_action
-    resource.update(resource_params)
   end
 
   def destroy
@@ -52,15 +45,15 @@ class API::V1::SnorlaxBase < ActionController::Base
   end
 
   def create_action
-    @event = service.create({resource_symbol => resource, actor: current_user})
+    @event = service.create(**{resource_symbol => resource, actor: current_user})
   end
 
   def update_action
-    @event = service.update({resource_symbol => resource, params: resource_params, actor: current_user})
+    @event = service.update(**{resource_symbol => resource, params: resource_params, actor: current_user})
   end
 
   def destroy_action
-    service.destroy({resource_symbol => resource, actor: current_user})
+    service.destroy(**{resource_symbol => resource, actor: current_user})
   end
 
   def permitted_params
@@ -88,7 +81,7 @@ class API::V1::SnorlaxBase < ActionController::Base
   end
 
   def respond_with_collection(scope: default_scope, serializer: serializer_class, root: serializer_root)
-    render json: records_to_serialize, scope: scope, each_serializer: serializer, root: root, meta: meta.merge({total: collection_count})
+    render json: records_to_serialize, scope: scope, each_serializer: serializer, root: root, meta: meta.merge({root: root, total: collection_count})
   end
 
   def meta
@@ -258,6 +251,10 @@ class API::V1::SnorlaxBase < ActionController::Base
     render json: {success: 'success'}
   end
 
+  def error_response(status = 500)
+    render json: {error: status}, root: false, status: status
+  end
+
   def load_resource
     self.resource = resource_class.find(params[:id])
   end
@@ -279,10 +276,14 @@ class API::V1::SnorlaxBase < ActionController::Base
   end
 
   def respond_with_standard_error(error, status)
-    render json: {exception: "#{error.class} #{error.to_s}"}, root: false, status: status
+    render json: {exception: error.class, error: error.to_s}, root: false, status: status
   end
 
-  def respond_with_errors
-    render json: {errors: resource.errors.as_json}, root: false, status: 422
+  def respond_with_error(status, message = "error")
+    render json: {error: message}, root: false, status: status
+  end
+
+  def respond_with_errors(record = resource)
+    render json: {errors: record.errors.as_json}, root: false, status: 422
   end
 end

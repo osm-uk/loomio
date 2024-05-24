@@ -4,13 +4,12 @@ km:
   loomio_tags:
     name_label: ឈ្មោះ
   common:
+    version: កំណែ
     group: 'ក្រុម'
     groups: 'ក្រុម'
     email_address: កែរសម្រួលអាស័យដ្ឋាន
     privacy:
       public: 'សាធារណះ'
-    models:
-      proposal: 'សំណើ'
     action:
       search: 'ស្វែងរក'
       save: 'រក្សាទុក​'
@@ -49,6 +48,8 @@ km:
     form:
       invitation_message_label: សារ
       poll_reminder:
+        message_label: សារ
+      wip_poll_reminder:
         message_label: សារ
   join_group_button:
     membership_requested: សំណើសមាជិកភាព
@@ -89,16 +90,8 @@ km:
     close_thread: 'បិទ'
   delete_comment_dialog:
     title: 'លុបមតិយោបល់ '
-    question: 'តើអ្នកប្រាកដថាអ្នកចង់លុបមតិយោបល់នេះ?'
-    confirm: 'លុបមតិយោបល់ '
   contact_message_form:
     subject_label: "ប្រធានបទ​"
-  hint:
-    context: 'ពត៏មានជំនួយសម្រាប់ការប្រើបន្ទះបរិបទនេះ'
-    discussion: 'គន្លឹះសម្រាប់ការចាប់ផ្តើមជាមួយការពិភាក្សារដ៏គួរឲ្យចាប់ចិត្ត'
-    invitation: 'គន្លឹះសម្រាប់ការសរសេរការអញ្ចើញដ៏អស្ចារ្យ'
-    proposal: 'គន្លឹះសម្រាប់ការសរសេរសំណើរច្បាស់លាស់'
-    vote: 'អ្នកអាចផ្លាស់ប្ដូរទីតាំងរបស់អ្នកនៅពេលណាមួួយ'
   poll_common:
     have_your_say: ការនិយាយរបស់អ្នក
     save_changes: រក្សាទុក​
@@ -112,15 +105,16 @@ km:
     closed: 'បានបិទ'
   poll_common_form:
     closed: បានបិទ
+  poll_proposal_options:
+    'yes': 'បាទ/ចាស!'
+    'no': 'ទេ'
   poll_count_options:
     'yes': 'បាទ/ចាស!'
     'no': 'ទេ'
+  chatbot:
+    password: លេខសម្ងាត់
   webhook:
     name_label: ឈ្មោះ
   group_survey:
     categories:
-      other: 'ផ្សេងទៀត '
-    uses:
-      other: 'ផ្សេងទៀត '
-    referrers:
       other: 'ផ្សេងទៀត '

@@ -1,9 +1,14 @@
 sk:
+  templates:
+    try_loomio: Vyskúšajte Loomio
   subscription_status:
     members: "Členovia"
   loomio_tags:
     name_label: Meno
   common:
+    please_wait: Počkajte prosím
+    version: Verzia
+    or: alebo
     time:
       am: dop.
       pm: odp.
@@ -15,8 +20,6 @@ sk:
       private: 'Súkromný'
     date_range:
       today: 'Dnes'
-    models:
-      proposal: 'Návrh'
     action:
       search: 'Vyhľadávať'
       save: 'Uložiť'
@@ -24,6 +27,7 @@ sk:
       like: 'To sa mi páči'
       unlike: 'To sa mi nepáči'
       cancel: 'Zrušiť'
+      clear: Vyčistiť
   emoji_picker:
     search: Vyhľadávať
   error_page:
@@ -59,6 +63,8 @@ sk:
     form:
       invitation_message_label: Správa
       poll_reminder:
+        message_label: Správa
+      wip_poll_reminder:
         message_label: Správa
   action_dock:
     edited: Aktualizovaný
@@ -102,6 +108,14 @@ sk:
     locale_label: 'Jazyk'
   change_picture_form:
     use_gravatar: 'Použiť Gravatar'
+  email_settings_page:
+    monday: Pondelok
+    tuesday: Utorok
+    wednesday: Streda
+    thursday: Štvrtok
+    friday: Piatok
+    saturday: Sobota
+    sunday: Nedeľa
   dashboard_page:
     aria_label: 'Ovládací panel'
     mark_as_read: Označiť ako prečítané
@@ -118,19 +132,11 @@ sk:
     close_thread: 'Uzatvoriť'
   delete_comment_dialog:
     title: 'Odstrániť komentár'
-    question: 'Naozaj chcete odstrániť tento komentár?'
-    confirm: 'Odstrániť komentár'
   contact_message_form:
     name_label: 'Vaše meno'
     subject_label: "Téma"
     email_label: 'Vaša emailová adresa'
     message_label: 'Vaša správa'
-  hint:
-    context: 'Rady pre používánie kontextového panelu'
-    discussion: 'Rady na zahájenie pútavej diskusie'
-    invitation: 'Rady na napísanie neodolateľnej pozvánky'
-    proposal: 'Rady na napísanie jasného návrhu'
-    vote: 'Môžete kdykoľvek svoj postoj zmeniť'
   poll_common:
     have_your_say: Vyjadrite svoj názor
     save_changes: Uložiť
@@ -147,18 +153,20 @@ sk:
     closed: 'Uzatvorené'
   poll_common_form:
     closed: Uzatvorené
+  poll_proposal_options:
+    'yes': 'Áno'
+    'no': 'Nie'
   poll_count_options:
     'yes': 'Áno'
     'no': 'Nie'
   auth_form:
     name_placeholder: Vaše meno
+  chatbot:
+    username: Prihlasovacie meno
+    password: Heslo
   webhook:
     name_label: Meno
   group_survey:
     categories:
       community: Komunitná skupina
-      other: Ostatné
-    uses:
-      other: Ostatné
-    referrers:
       other: Ostatné

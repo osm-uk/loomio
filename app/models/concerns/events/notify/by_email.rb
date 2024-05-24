@@ -7,12 +7,11 @@ module Events::Notify::ByEmail
   # send event emails
   def email_users!
     email_recipients.active.uniq.pluck(:id).each do |recipient_id|
-      eventable.send(:mailer).delay(queue: :critical).send(email_method, recipient_id, self.id)
+      EventMailer.event(recipient_id, self.id).deliver_later
     end
   end
 
-  private
-  def email_method
-    kind
+  def wait_time
+    1.minute
   end
 end

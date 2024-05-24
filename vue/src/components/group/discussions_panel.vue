@@ -1,188 +1,259 @@
-<script lang="coffee">
-import Records            from '@/shared/services/records'
-import AbilityService     from '@/shared/services/ability_service'
-import EventBus           from '@/shared/services/event_bus'
-import RecordLoader       from '@/shared/services/record_loader'
-import ThreadFilter       from '@/shared/services/thread_filter'
-import { map, debounce, orderBy, intersection, compact, omit, filter, concat, uniq } from 'lodash'
-import Session from '@/shared/services/session'
+<script lang="js">
+import Records            from '@/shared/services/records';
+import AbilityService     from '@/shared/services/ability_service';
+import EventBus           from '@/shared/services/event_bus';
+import RecordLoader       from '@/shared/services/record_loader';
+import PageLoader         from '@/shared/services/page_loader';
+import { debounce, orderBy, intersection, concat, uniq } from 'lodash-es';
+import Session from '@/shared/services/session';
+import { mdiMagnify } from '@mdi/js';
 
 export default
-  created: ->
-    @onQueryInput = debounce (val) =>
-      @$router.replace(@mergeQuery(q: val))
-    , 500
-    @init()
+{
+  created() {
+    this.onQueryInput = debounce(val => {
+      this.$router.replace(this.mergeQuery({q: val}));
+    }
+    , 1000);
+    this.init();
+    EventBus.$on('signedIn', this.init);
+  },
 
-  data: ->
-    group: null
-    discussions: []
-    searchResults: []
-    loader: null
-    searchLoader: null
-    groupIds: []
+  beforeDestroy() {
+    EventBus.$off('signedIn', this.init);
+  },
 
-  methods:
-    routeQuery: (o) ->
-      @$router.replace(@mergeQuery(o))
+  data() {
+    return {
+      group: null,
+      discussions: [],
+      loader: null,
+      groupIds: [],
+      per: 25,
+      dummyQuery: null,
+      mdiMagnify
+    };
+  },
 
-    openStartDiscussionModal: ->
-      EventBus.$emit 'openModal',
-        component: 'DiscussionForm'
-        props:
-          discussion: Records.discussions.build
-            descriptionFormat: Session.defaultFormat()
-            groupId: @group.id
+  methods: {
+    routeQuery(o) {
+      this.$router.replace(this.mergeQuery(o));
+    },
 
-    beforeDestroy: ->
-      EventBus.$off 'joinedGroup'
+    beforeDestroy() {
+      EventBus.$off('joinedGroup');
+    },
 
-    init: ->
-      Records.groups.findOrFetch(@$route.params.key).then (group) =>
-        @group = group
+    init() {
+      Records.groups.findOrFetch(this.$route.params.key).then(group => {
+        this.group = group;
 
-        EventBus.$emit 'currentComponent',
-          page: 'groupPage'
-          title: @group.name
-          group: @group
-          search:
-            placeholder: @$t('navbar.search_threads', name: @group.parentOrSelf().name)
+        EventBus.$emit('currentComponent', {
+          page: 'groupPage',
+          title: this.group.name,
+          group: this.group,
+          search: {
+            placeholder: this.$t('navbar.search_threads', {name: this.group.parentOrSelf().name})
+          }
+        }
+        );
 
-        EventBus.$on 'joinedGroup', (group) => @fetch()
+        EventBus.$on('joinedGroup', group => this.fetch());
 
-        @refresh()
+        this.refresh();
 
-        @watchRecords
-          key: @group.id
-          collections: ['discussions', 'groups', 'memberships']
-          query: (store) => @query(store)
+        this.watchRecords({
+          key: this.group.id,
+          collections: ['discussions', 'groups', 'memberships'],
+          query: () => this.query()
+        });
+      });
+    },
 
+    refresh() {
+      this.loader = new PageLoader({
+        path: 'discussions',
+        order: 'lastActivityAt',
+        params: {
+          group_id: this.group.id,
+          exclude_types: 'group outcome poll',
+          filter: this.$route.query.t,
+          subgroups: this.$route.query.subgroups || 'mine',
+          tags: this.$route.query.tag,
+          per: this.per
+        }
+      });
 
-    refresh: ->
-      @loader = new RecordLoader
-        collection: 'discussions'
-        params:
-          group_id: @group.id
-          exclude_types: 'group outcome'
-          per: 25
+      this.fetch();
+      this.query();
+    },
 
-      @searchLoader = new RecordLoader
-        collection: 'searchResults'
-        params:
-          exclude_types: 'group stance outcome poll'
-          subgroups: @$route.query.subgroups || 'all'
-          group_id: @group.id
+    query() {
+      if (!this.group) { return; }
+      this.publicGroupIds = this.group.publicOrganisationIds();
 
+      this.groupIds = (() => { switch (this.$route.query.subgroups || 'mine') {
+        case 'mine': return uniq(concat(intersection(this.group.organisationIds(), Session.user().groupIds()), this.publicGroupIds, this.group.id));
+        case 'all': return this.group.organisationIds();
+        default: return [this.group.id];
+      } })();
 
-      @fetch()
-      @query()
+      let chain = Records.discussions.collection.chain();
+      chain = chain.find({discardedAt: null});
+      chain = chain.find({groupId: {$in: this.groupIds}});
 
-    query: (store) ->
-      return unless @group
-      @publicGroupIds = @group.publicOrganisationIds()
+      switch (this.$route.query.t) {
+        case 'unread':
+          chain = chain.where(discussion => discussion.isUnread());
+          break;
+        case 'closed':
+          chain = chain.find({closedAt: {$ne: null}});
+          break;
+        case 'templates':
+          chain = chain.find({template: true});
+          break;
+        case 'all':
+          true; // noop
+          break;
+        default:
+          chain = chain.find({closedAt: null});
+      }
 
-      @groupIds = switch (@$route.query.subgroups || 'mine')
-        when 'mine' then uniq(concat(intersection(@group.organisationIds(), Session.user().groupIds()), @publicGroupIds, @group.id)) # @group.id is present if @group is a subgroup of parentgroup that i'm a member of, and that parent group has parentMembersCanSeeDiscussions
-        when 'all' then @group.organisationIds()
-        else [@group.id]
+      if (this.$route.query.tag) {
+        const tag = Records.tags.find({groupId: this.group.parentOrSelf().id, name: this.$route.query.tag})[0];
+        chain = chain.find({tagIds: {'$contains': tag.id}});
+      }
 
-      if @$route.query.q
-        chain = Records.searchResults.collection.chain()
-        chain = chain.find(groupId: {$in: @group.parentOrSelf().organisationIds()})
-        chain = chain.find(query: @$route.query.q)
-        @searchResults = orderBy(chain.data(), 'rank', 'desc')
-      else
-        chain = Records.discussions.collection.chain()
-        chain = chain.find(discardedAt: null)
-        chain = chain.find(groupId: {$in: @groupIds})
+      if (this.loader.pageWindow[this.page]) {
+        if (this.page === 1) {
+          chain = chain.find({lastActivityAt: {$gte: this.loader.pageWindow[this.page][0]}});
+        } else {
+          chain = chain.find({lastActivityAt: {$jbetween: this.loader.pageWindow[this.page]}});
+        }
+        return this.discussions = chain.simplesort('lastActivityAt', true).data();
+      } else {
+        return this.discussions = [];
+      }
+    },
 
-        switch @$route.query.t
-          when 'unread'
-            chain = chain.where (discussion) -> discussion.isUnread()
-          when 'closed'
-            chain = chain.find(closedAt: {$ne: null})
-          when 'all'
-            true # noop
-          else
-            chain = chain.find(closedAt: null)
+    fetch() {
+      this.loader.fetch(this.page).then( () => this.query());
+    },
 
-        if @$route.query.tag
+    filterName(filter) {
+      switch (filter) {
+        case 'unread': return 'discussions_panel.unread';
+        case 'all': return 'discussions_panel.all';
+        case 'closed': return 'discussions_panel.closed';
+        case 'subscribed': return 'change_volume_form.simple.loud';
+        default:
+          return 'discussions_panel.open';
+      }
+    },
 
-          tag = Records.tags.find(groupId: @group.parentOrSelf().id, name: @$route.query.tag)[0]
-          chain = chain.find({tagIds: {'$contains': tag.id}})
+    openSearchModal() {
+      let initialOrgId = null;
+      let initialGroupId = null;
+    
+      if (this.group.isParent()) {
+        initialOrgId = this.group.id;
+      } else {
+        initialOrgId = this.group.parentId;
+        initialGroupId = this.group.id;
+      }
 
-        @discussions = chain.data()
+      EventBus.$emit('openModal', {
+        component: 'SearchModal',
+        persistent: false,
+        maxWidth: 900,
+        props: {
+          initialOrgId,
+          initialGroupId,
+          initialQuery: this.dummyQuery
+        }
+      }
+      );
+    }
+  },
 
-    fetch: ->
-      if @$route.query.q
-        @searchLoader.fetchRecords(q: @$route.query.q)
-      else
-        params = {}
-        params.per = 50
-        params.filter = 'show_closed' if @$route.query.t == 'closed'
-        params.filter = 'all' if @$route.query.t == 'all'
-        params.subgroups = @$route.query.subgroups || 'mine'
-        params.tags = @$route.query.tag
-        @loader.fetchRecords(params)
+  watch: {
+    '$route.params': 'init',
+    '$route.query': 'refresh',
+    'page'() {
+      this.fetch();
+      return this.query();
+    }
+  },
 
-    filterName: (filter) ->
-      switch filter
-        when 'unread' then 'discussions_panel.unread'
-        when 'all' then 'discussions_panel.all'
-        when 'closed' then 'discussions_panel.closed'
-        when 'subscribed' then 'change_volume_form.simple.loud'
-        else
-          'discussions_panel.open'
+  computed: {
+    page: {
+      get() { return parseInt(this.$route.query.page) || 1; },
+      set(val) {
+        return this.$router.replace({query: Object.assign({}, this.$route.query, {page: val})});
+      }
+    }, 
 
+    totalPages() {
+      return Math.ceil(parseFloat(this.loader.total) / parseFloat(this.per));
+    },
 
-  watch:
-    '$route.params': 'init'
-    '$route.query': 'refresh'
+    pinnedDiscussions() {
+      return orderBy(this.discussions.filter(discussion => discussion.pinnedAt), ['pinnedAt'], ['desc']);
+    },
 
-  computed:
-    pinnedDiscussions: ->
-      orderBy(@discussions.filter((discussion) -> discussion.pinned), ['title'], ['asc'])
+    regularDiscussions() {
+      return orderBy(this.discussions.filter(discussion => !discussion.pinnedAt), ['lastActivityAt'], ['desc']);
+    },
 
-    regularDiscussions: ->
-      orderBy(@discussions.filter((discussion) -> !discussion.pinned), ['lastActivityAt'], ['desc'])
+    groupTags() {
+      return this.group && this.group.tags().filter(tag => tag.taggingsCount > 0);
+    },
 
-    groupTags: ->
-      @group && @group.parentOrSelf().tags().filter (tag) -> tag.taggingsCount > 0
+    loading() {
+      return this.loader.loading;
+    },
 
-    loading: ->
-      @loader.loading || @searchLoader.loading
+    noThreads() {
+      return !this.loading && (this.discussions.length === 0);
+    },
 
-    noThreads: ->
-      !@loading && @discussions.length == 0
+    canViewPrivateContent() {
+      return AbilityService.canViewPrivateContent(this.group);
+    },
 
-    canViewPrivateContent: ->
-      AbilityService.canViewPrivateContent(@group)
+    canStartThread() {
+      return AbilityService.canStartThread(this.group);
+    },
 
-    canStartThread: ->
-      AbilityService.canStartThread(@group)
+    isLoggedIn() {
+      return Session.isSignedIn();
+    },
 
-    isLoggedIn: ->
-      Session.isSignedIn()
+    isMember() {
+      return this.group && Session.user().membershipFor(this.group);
+    },
 
-    unreadCount: ->
-      filter(@discussions, (discussion) -> discussion.isUnread()).length
+    unreadCount() {
+      return this.discussions.filter(discussion => discussion.isUnread()).length;
+    },
 
-    suggestClosedThreads: ->
-      @loader.exhausted && ['undefined', 'open', 'unread'].includes(String(@$route.query.t)) && @group && @group.closedDiscussionsCount
+    suggestClosedThreads() {
+      return ['undefined', 'open', 'unread'].includes(String(this.$route.query.t)) && this.group && this.group.closedDiscussionsCount;
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
 div.discussions-panel(v-if="group")
   v-layout.py-3(align-center wrap)
-    //- v-select(solo hide-details flat flex-shrink :items="['Open']").mr-2
-    //- v-select(solo hide-details flat flex-shrink :items="['All tags']").mr-2
     v-menu
       template(v-slot:activator="{ on, attrs }")
         v-btn.mr-2.text-lowercase.discussions-panel__filters(v-on="on" v-bind="attrs" text)
           span(v-t="{path: filterName($route.query.t), args: {count: unreadCount}}")
-          v-icon mdi-menu-down
-      v-list(dense)
+          common-icon(name="mdi-menu-down")
+      v-list
         v-list-item.discussions-panel__filters-open(@click="routeQuery({t: null})")
           v-list-item-title(v-t="'discussions_panel.open'")
         v-list-item.discussions-panel__filters-all(@click="routeQuery({t: 'all'})")
@@ -197,36 +268,47 @@ div.discussions-panel(v-if="group")
         v-btn.mr-2.text-lowercase(v-on="on" v-bind="attrs" text)
           span(v-if="$route.query.tag") {{$route.query.tag}}
           span(v-else v-t="'loomio_tags.tags'")
-          v-icon mdi-menu-down
+          common-icon(name="mdi-menu-down")
       v-sheet.pa-1
-        tags-display(:tags="group.parentOrSelf().tags()" show-counts)
-    v-text-field.mr-2.flex-grow-1(clearable solo hide-details :value="$route.query.q" @input="onQueryInput" :placeholder="$t('navbar.search_threads', {name: group.name})" append-icon="mdi-magnify" :loading="searchLoader.loading")
-    v-btn.discussions-panel__new-thread-button(:to="'/d/new?group_id='+group.id" color='primary' v-if='canStartThread' v-t="'navbar.start_thread'")
+        tags-display(:tags="group.tagNames()" :group="group" :show-counts="!!group.parentId" :show-org-counts="!group.parentId")
+    v-text-field.mr-2.flex-grow-1(
+      v-model="dummyQuery"
+      clearable solo hide-details
+      @click="openSearchModal"
+      @change="openSearchModal"
+      @keyup.enter="openSearchModal"
+      @click:append="openSearchModal"
+      :placeholder="$t('navbar.search_threads', {name: group.name})"
+      :append-icon="mdiMagnify")
+    v-btn.discussions-panel__new-thread-button(
+      v-if='canStartThread'
+      v-t="'navbar.start_thread'"
+      :to="'/thread_templates/?group_id='+group.id"
+      color='primary')
 
-  v-card.discussions-panel(outlined)
+  v-alert(color="info" text outlined v-if="isMember && noThreads")
+    v-card-title(v-t="'discussions_panel.welcome_to_your_new_group'")
+    p.px-4(v-t="'discussions_panel.lets_start_a_thread'")
+
+  v-card.discussions-panel(v-else outlined)
     div(v-if="loader.status == 403")
       p.pa-4.text-center(v-t="'error_page.forbidden'")
     div(v-else)
-      .discussions-panel__content(v-if="!$route.query.q")
-        .discussions-panel__list--empty.pa-4(v-if='noThreads' :value="true")
+      .discussions-panel__content
+        .discussions-panel__list--empty.pa-4(v-if='noThreads')
           p.text-center(v-if='canViewPrivateContent' v-t="'group_page.no_threads_here'")
           p.text-center(v-if='!canViewPrivateContent' v-t="'group_page.private_threads'")
         .discussions-panel__list.thread-preview-collection__container(v-if="discussions.length")
           v-list.thread-previews(two-line)
-            thread-preview(:show-group-name="groupIds.length > 1" v-for="thread in pinnedDiscussions" :key="thread.id" :thread="thread" group-page)
-            thread-preview(:show-group-name="groupIds.length > 1" v-for="thread in regularDiscussions" :key="thread.id" :thread="thread" group-page)
+            thread-preview(:show-group-name="groupIds.length > 1" v-for="thread in pinnedDiscussions", :key="thread.id", :thread="thread" group-page)
+            thread-preview(:show-group-name="groupIds.length > 1" v-for="thread in regularDiscussions", :key="thread.id", :thread="thread" group-page)
 
+        loading(v-if="loading && discussions.length == 0")
+
+        v-pagination(v-model="page", :length="totalPages", :total-visible="7", :disabled="totalPages == 1")
         .d-flex.justify-center
-          .d-flex.flex-column.align-center
-            .text--secondary
-              | {{discussions.length}} / {{loader.total}}
-            v-btn.my-2.discussions-panel__show-more(outlined color='accent' v-if="discussions.length < loader.total && !loader.exhausted" :loading="loader.loading" @click="fetch()")
-              span(v-t="'common.action.load_more'")
-            router-link.discussions-panel__view-closed-threads.text-center.pa-1(:to="'?t=closed'" v-if="suggestClosedThreads" v-t="'group_page.view_closed_threads'")
+          router-link.discussions-panel__view-closed-threads.text-center.pa-1(:to="'?t=closed'" v-if="suggestClosedThreads" v-t="'group_page.view_closed_threads'")
 
-      .discussions-panel__content.pa-4(v-if="$route.query.q")
-        p.text-center.discussions-panel__list--empty(v-if='!searchResults.length && !searchLoader.loading' v-t="{path: 'discussions_panel.no_results_found', args: {search: $route.query.q}}")
-        thread-search-result(v-else v-for="result in searchResults" :key="result.id" :result="result")
 </template>
 
 <style lang="sass">

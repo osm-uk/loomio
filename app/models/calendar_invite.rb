@@ -13,7 +13,6 @@ class CalendarInvite
   private
 
   def build_calendar(outcome)
-    return unless outcome.poll_option && outcome.dates_as_options
     Icalendar::Calendar.new.tap do |calendar|
       calendar.event do |event|
         if outcome.poll_option.name.match /^\d+-\d+-\d+$/
@@ -28,7 +27,7 @@ class CalendarInvite
         event.description = outcome.event_description
         event.location    = outcome.event_location
         event.attendee    = outcome.attendee_emails
-        event.ip_class    = outcome.poll.anyone_can_participate ? "PUBLIC" : "PRIVATE"
+        event.ip_class    = "PRIVATE"
         event.url         = poll_url(outcome.poll)
       end
     end

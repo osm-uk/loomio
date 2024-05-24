@@ -1,4 +1,13 @@
 class API::V1::ProfileController < API::V1::RestfulController
+  before_action :require_current_user, only: [:index, :contactable]
+
+  def index
+    ids = UserQuery.invitable_user_ids(model: nil, actor: current_user, user_ids: params[:xids].split('x').map(&:to_i).compact)
+    self.collection = User.where(id: ids)
+    cache = RecordCache.for_collection(collection, current_user.id, exclude_types)
+    respond_with_collection serializer: AuthorSerializer, root: :users, scope: {cache: cache, exclude_types: exclude_types}
+  end
+
   def show
     load_and_authorize :user
     respond_with_resource serializer: UserSerializer
@@ -19,6 +28,16 @@ class API::V1::ProfileController < API::V1::RestfulController
     render json: time_zones, root: false
   end
 
+  def all_time_zones
+    zones = ActiveSupport::TimeZone.all.map do |tz|
+      {
+        title: I18n.t("timezones.#{tz.name}", default: tz.name, locale: params[:selected_locale]),
+        value: tz.tzinfo.name
+      }
+    end
+    render json: zones, root: false
+  end
+
   def mentionable_users
     instantiate_collection do |collection|
       collection.distinct.mention_search(current_user, model, String(params[:q]).strip.delete("\u0000"))
@@ -32,13 +51,22 @@ class API::V1::ProfileController < API::V1::RestfulController
     respond_with_resource serializer: UserSerializer
   end
 
+  def email_api_key
+    render json: {email_api_key: current_user.email_api_key}
+  end
+
+  def reset_email_api_key
+    current_user.update_attribute(:email_api_key, User.generate_unique_secure_token.slice(0,10))
+    render json: {email_api_key: current_user.email_api_key}
+  end
+
   def remind
     service.remind(user: load_resource, actor: current_user, model: load_and_authorize(:poll))
     respond_with_resource
   end
 
   def update_profile
-    service.update(current_user_params)
+    service.update(**current_user_params)
     respond_with_resource
   end
 
@@ -52,14 +80,23 @@ class API::V1::ProfileController < API::V1::RestfulController
     respond_with_resource
   end
 
+  def avatar_uploaded
+    render json: {avatar_uploaded: current_user.uploaded_avatar_url}
+  end
+
+  def deactivate
+    service.deactivate(user: current_user, actor: current_user)
+    respond_with_resource
+  end
+
   def destroy
-    service.deactivate(user: current_user)
+    service.redact(user: current_user, actor: current_user)
     respond_with_resource
   end
 
   def save_experience
-    raise ActionController::ParameterMissing.new(:experience) unless params[:experience]
-    service.save_experience user: current_user, actor: current_user, params: { experience: params[:experience], remove_experience: params[:remove_experience]}
+    raise ActionController::ParameterMissing.new(:experience) unless params.has_key?(:experience)
+    service.save_experience(user: current_user, actor: current_user, params: params)
     respond_with_resource
   end
 
@@ -73,7 +110,12 @@ class API::V1::ProfileController < API::V1::RestfulController
 
   def send_merge_verification_email
     MergeUsersService.send_merge_verification_email(actor: current_user, target_email: params[:target_email])
-    render json: { success: :ok }
+    success_response
+  end
+
+  def contactable
+    current_user.ability.authorize!(:contact, User.find(params[:user_id]))
+    success_response
   end
 
   private
@@ -103,7 +145,7 @@ class API::V1::ProfileController < API::V1::RestfulController
   end
 
   def deactivated_user
-    resource_class.inactive.find_by(email: params[:user][:email])
+    resource_class.deactivated.find_by(email: params[:user][:email])
   end
 
   def current_user_params

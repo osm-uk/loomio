@@ -1,14 +1,9 @@
 eo:
-  loomio_onboarding:
-    group_progress_card:
-      activities:
-        set_description: Grupa priskribo
-        invite_people_in: Inviti homojn
-        start_thread: Komenci fadedon por diskuti
-        make_decision: Komenci decidon
-      learn_more: 'Pli da informoj pri la funkciado de Loomio '
-      celebration_message: Bone farite!  Via grupo nun estas preta! 🎉
-      dismiss_this_card: Ignori tiun ĉi karton
+  start_trial:
+    your_name: Via nomo
+    success: Sukceso!
+  templates:
+    try_loomio: Provu uzi Loomio-n
   plan_names:
     free: Senpaga
     trial: Provo
@@ -19,11 +14,11 @@ eo:
     yearly: Jare
   current_plan_button:
     upgrade: Ĝisdatigi
-    free_trial: Senpaga provo. {{days}} tagoj ankoraŭ restas.
+    free_trial: Senpaga provo. %{days} tagoj ankoraŭ restas.
     trial_expired: Via provo finiĝis. Aĉetu la pagitan version por daŭre uzi Loomion.
     tooltip: "Niaj prezoj estas bonegaj! Aĉetu la pagitan version hodiaŭ kaj ĝuu ĉion, kion Loomio povas provizi por via grupo."
-    was_gift_trial: "Via grupo uzas Loomio senpage ekde  {{createdDate}}. Ne eblas plu provizi senpagan servon. Bonvlu aĉeti la pagitan version por daŭre uzi Loomion. <a href='https://help.loomio.org/en/plan-changes/' target='_blank' style='text-decoration: underline;'>Legu pli.</a>"
-    was_gift_remaining: "{{days}} tagoj restas."
+    was_gift_trial: "Via grupo uzas Loomio senpage ekde  %{createdDate}. Ne eblas plu provizi senpagan servon. Bonvlu aĉeti la pagitan version por daŭre uzi Loomion. <a href='https://help.loomio.org/en/plan-changes/' target='_blank' style='text-decoration: underline;'>Legu pli.</a>"
+    was_gift_remaining: "%{days} tagoj restas."
     was_gift_expired: "Via senpaga servo jam finiĝis."
   subscription_status:
     members: "Membroj"
@@ -42,70 +37,28 @@ eo:
     apply_tags: Alkroĉi etikedon
     name_label: Nomo
     color_label: Koloro
-    card_title: Kategoriaj etikedoj
     modal_title: Krei novan etikedon
     modal_edit_title: Redakti etikedon
     modal_destroy_title: Forigi etikedon
     helptext: Etikedoj permesas al vi grupigi fadenojn por facile trovi ilin poste.
-    discussions_count_singular: ({{count}} fadeno)
-    discussions_count_plural: ({{count}} fadenoj)
     tag_created: Etikedo konservita
-    tags_marked: Fadenoj markitaj kiel  '{{name}}' en {{groupName}}
-    no_tags_present: Neniu fadeno kun tiu etikedo estis trovita. Bonvolu provi alian.
-  reactions:
-    slight_smile: Ŝati
-    heart: Ŝategi
-    laughing: Ridi
-    clap: Klapi
-    hugging: Brakumi
-    sunglasses: Mojose
-    wink: Palpebrumi
-    nerd: Saĝe
-    relieved: Trankvilige
-    worried: Maltrankvilige
-    confused: Konfuze
-    confounded: Frenezige
-    neutral_face: Neŭtrale
-    slight_frown: paŭte
-    disappointed: Seniluzige
-    angry: Furioze
-    weary: Maltrankvile
-    astonished: Surprizite
-    rolling_eyes: Sinĝene rigardi
-    cry: Krii
-    scream: Kriegi
-    sleeping: Enue
-    thinking: Penseme
-    raised_hands: Manleve
-    pray: Preĝe
-    fingers_crossed: Bonŝancon!
-    v: Pacon!
-    metal: Metalo
-    ok_hand: Bone!
-    wave: Svingi manon
-    thumbsup: Mi aprobas!
-    thumbsdown: Mi malaprobas!
+    tags_marked: Fadenoj markitaj kiel  '%{name}' en %{groupName}
   poll_types:
     proposal: propono
-    count: kontrolo
     poll: enketo
     dot_vote: punkto-voĉdonado
     meeting: tempa enketo
     ranked_choice: ordigo laŭ prefero
     score: poenta enketo
-  new_poll_types:
-    proposal: propono
-    count: kiomo
-    poll: elekti
-    score: poentaro
-    ranked_choice: ordo
-    dot_vote: asigni
-    meeting: tempa enketo
   timezones:
-    local: Loka tempo ({{value}})
+    local: Loka tempo (%{value})
   common:
+    are_you_sure: Ĉu vi certas?
+    please_wait: Bonvolu atendi
+    version: Versio
     no_results_found: Neniu rezulto trovita
     view: Vidi
+    or: aŭ
     history: Historio
     option: Elekto
     you: Vi
@@ -117,13 +70,13 @@ eo:
     time_zone: Horzono
     local_time: Loka tempo
     attachments: Alkroĉaĵoj
-    active_time_ago: Lastafoje aktiva  {{time_ago}}
+    active_time_ago: Lastafoje aktiva  %{time_ago}
     confirm_discard_changes: Ĉu forigi la ŝanĝojn?
     time:
       am: atm
       pm: ptm
-    closing_in: 'Fermiĝos {{time}}'
-    closed_ago: 'Fermiĝis {{time}}'
+    closing_in: 'Fermiĝos %{time}'
+    closed_ago: 'Fermiĝis %{time}'
     volume: 'Laŭteco'
     notification_volume: 'Sciiga laŭteco'
     group: 'Grupo'
@@ -152,12 +105,10 @@ eo:
       thismonth: 'Ĉi-monate'
       older: 'Antaŭ pli da tempo'
     more_help: 'Plia helpo'
-    models:
-      proposal: 'Propono'
     copy: 'Kopii'
     copy_text: 'Kopii tekston'
     copied: 'Kopiite al la tondaĵ-poŝo'
-    points_abbrev: Ĉiu voĉdono valoras {{score}} poentojn
+    points_abbrev: Ĉiu voĉdono valoras %{score} poentojn
     total: Entute
     action:
       print: Presi
@@ -188,6 +139,7 @@ eo:
       load_more: 'Montri pli'
       ok: Enorde
       retry: Reprovi
+      clear: Klara
       done: Fini
       send: Sendi
       joined: Aliĝis
@@ -238,9 +190,6 @@ eo:
   close_explanation_modal:
     aria_label: Fermigi fadenon
     close_thread: Fermigi fadenon
-  mute_explanation_modal:
-    aria_label: Silentigi fadenon
-    mute_thread: Silentigi fadenon
   inbox:
     clear: 'Klara'
     latest: 'Plej lasta'
@@ -257,7 +206,7 @@ eo:
     cancel_reply: 'Nuligu la respondon'
     confirm_delete_message: 'Ĉu vi certas, ke vi volas forigi tiun ĉi komenton?'
     confirm_delete: 'Forigi la komenton'
-    in_reply_to: "Responu al {{nomo}}"
+    in_reply_to: "Responu al %{nomo}"
     post_comment: "Afiŝu komenton"
     submit_button:
       label: 'Afiŝu'
@@ -265,7 +214,6 @@ eo:
     threads: 'Fadenoj'
     all_groups: 'Ĉiuj grupoj'
     recent_threads: 'Lastatempaj fadenoj'
-    unread_threads: 'Nelegitaj fadenoj ({{count}})'
     muted_threads: 'Silentigitaj fadenoj'
     start_subgroup: 'Nova subgrupo'
     explore_groups: Esplori grupojn
@@ -273,8 +221,8 @@ eo:
     aria_labels:
       groups_list: 'Grupoj'
   navbar:
-    search_members: 'Serĉu membrojn en {{name}}'
-    search_subgroups: 'Serĉu membrojn en {{name}}'
+    search_members: 'Serĉu membrojn en %{name}'
+    search_subgroups: 'Serĉu membrojn en %{name}'
     recent_title: 'Iri al supervidpanelo'
     unread_title: 'Vidi nelegitan aktivecon'
     start_thread: 'Nova fadeno'
@@ -291,18 +239,15 @@ eo:
   user_dropdown:
     edit_profile: 'Redakti profilon'
     help: 'Helpo'
-    contact_site_name: 'Kontakti {{site_name}}'
+    contact_site_name: 'Kontakti %{site_name}'
     sign_out: 'Elsaluti'
   membership_card:
     group_members: "Membroj de la grupo"
     discussion_members: "Membroj de la fadeno"
-    poll_members: "{{pollType}} membroj"
+    poll_members: "%{pollType} membroj"
     invite_to_poll: "Inviti homojn voĉdoni"
   notifications:
     header: "Sciigoj"
-    new_motion: "<strong>{{name}}</strong> kreis proponon <strong>{{title}}</strong>"
-    motion_closed_by_user: "<strong>{{name}}</strong> fermis proponon <strong>{{title}}</strong>"
-    membership_requested: "<strong>{{name}}</strong> petis membriĝi al <strong>{{title}}</strong>"
   discussion_fork_actions:
     move: Movi
     search_placeholder: Serĉu iun fadenon per titolo
@@ -323,18 +268,18 @@ eo:
     title_label: 'Titolo'
     context_label: 'Kunteksto'
     privacy_label: 'Privateco'
-    privacy_public: 'Ĉiu ajn rajtas vidi la fadenon.  Sole grupanoj povas partopreni.'
-    privacy_private: 'Nur membroj de {{group}} povos vidi ĉi tiun fadenon.'
-    privacy_organisation: 'Kaj membroj de {{parent}}, kaj membroj de {{group}} povos vidi ĉi tiun fadenon'
+    privacy_organisation: 'Kaj membroj de %{parent}, kaj membroj de %{group} povos vidi ĉi tiun fadenon'
   announcement:
     audiences:
-      group: Membroj de {{name}}
+      group: "Membroj de %{name}"
     form:
       invitation_message_label: Mesaĝo
       poll_announced:
         title: Inviti homojn voĉdoni
         helptext: Kiun vi volas inviti voĉdoni?
       poll_reminder:
+        message_label: Mesaĝo
+      wip_poll_reminder:
         message_label: Mesaĝo
   action_dock:
     add_comment: Komenti
@@ -354,7 +299,7 @@ eo:
     join_group: Aliĝi al la grupo
     membership_requested: Membreco petiĝis
     messages:
-      joined_group: 'Vi nun estas membro de {{group}}'
+      joined_group: 'Vi nun estas membro de %{group}'
   membership_request_form:
     heading: Peti aliĝon al la grupo
     name_label: Nomo
@@ -364,15 +309,13 @@ eo:
     current_revision: Plej lasta
   reactions_display:
     you: "Vi"
-    you_and_name: "Vi kaj {{name}}"
-    you_and_name_and_count_more: "Vi, {{name}} kaj {{count}} pli"
-    name_and_count_more: "{{name}} kaj {{count}} pli"
+    you_and_name: "Vi kaj %{name}"
   group_page:
     threads: Fadenoj
+    decisions: Decidoj
     members: Membroj
     settings: Agordoj
     subgroups: Subgrupoj
-    show_closed: '{{count}} Fermita'
     new_group_logo: 'Alŝuti novan emblemon de grupo'
     invite_people: 'Inviti'
     options_label: 'Opcioj'
@@ -399,9 +342,6 @@ eo:
     approve: Aprobi
     ignore: Ignori
     previous_requests: Antaŭaj petoj
-  group_previous_proposals_card:
-    heading: Antaŭaj proponoj
-    see_more: Vidi pli
   invitation_form:
     invite_people: 'Inviti personojn'
     group: 'Grupo'
@@ -427,13 +367,21 @@ eo:
     locale_label: 'Lingvo'
     location_placeholder: 'Kie vi estas bazita?'
     update_profile: 'Ĝisdatigi profilon'
-    help_translate: "Helpu nin traduki Loomion!"
+    deactivate_account: 'Malaktivigi konton'
   change_picture_form:
     use_gravatar: 'Uzi Gravataron'
   email_settings_page:
+    monday: Lundo
+    tuesday: Mardo
+    wednesday: Merkredo
+    thursday: Ĵaŭdo
+    friday: Vendredo
+    saturday: Sabato
+    sunday: Dimanĉo
     edit: Redakti
   dashboard_page:
     aria_label: 'Supervidpanelo'
+    recent_threads: "Lastatempaj fadenoj"
     no_threads:
       show_all: Vi ne havas lastatempajn fadenojn.
     view_recent: Ĉu vidi ĉiujn lastatempajn fadenojn?
@@ -444,10 +392,8 @@ eo:
       all_aria_label: Nun montras lastatempajn fadenojn
       all_description: Montri lastatempajn fadenojn
       proposals: Propozicioj
-    aria_thread:
-      you_voted: 'Vi voĉdonis: {{position}}.'
     thread_preview:
-      you_voted: 'Vi voĉdonis {{position}}'
+      you_voted: 'Vi voĉdonis %{position}'
     threads_from:
       today: 'Hodiaŭ'
       yesterday: 'Hieraŭ'
@@ -479,8 +425,6 @@ eo:
     confirm: Movi fadenon
   delete_comment_dialog:
     title: 'Forigi komenton'
-    question: 'Ĉu vi certas, ke vi volas forigi tiun ĉi komenton?'
-    confirm: 'Forigi komenton'
   contact_message_form:
     title: "Saluton! Kiel ni povas helpi?"
     contact_us: 'Kontakti nin'
@@ -490,12 +434,6 @@ eo:
     email_label: 'Via retpoŝtadreso'
     message_label: 'Via mesaĝo'
     send_message: 'Sendi mesaĝon'
-  hint:
-    context: 'Konsiloj por uzo de la kunteksto-panelo'
-    discussion: 'Konsiloj por komenci engaĝigan diskuton'
-    invitation: 'Konsiloj por verki bonegan inviton'
-    proposal: 'Konsiloj por verki klaran proponon'
-    vote: 'Vi povas ŝanĝi vian sintenon iam ajn'
   explore_page:
     header: Esplori grupojn
   global:
@@ -503,10 +441,9 @@ eo:
       reload: 'Reŝarĝi'
   decision_tools_card:
     proposal_title: Propozicio
-    count_title: Kontroli
     poll_title: Enketo
-    dot_vote_title: Punkto-Voĉdonado
   poll_common:
+    proposal: Propozicio
     vote_now: Voĉdonu nun
     have_your_say: Donu vian opinion
     your_response: Via respondo
@@ -531,6 +468,7 @@ eo:
   members_panel:
     no_results: 'Ne troviĝis membroj'
     everyone: 'Ĉiuj'
+    all: Ĉiuj
     order_by_name: 'Nomo'
     header_name: 'Nomo'
     header_username: 'Uzantnomo'
@@ -543,40 +481,25 @@ eo:
     closed: 'Fermita'
   poll_common_action_panel:
     anonymous: Voĉdonoj ne montros uzantnomojn
-  poll_common_select_group:
-    loomio_group: Grupo
   poll_common_calendar_invite:
     event_duration: Daŭro
   poll_common_settings:
     anonymous:
       title: Nescieblaj voĉdonantoj
-    voter_can_add_options:
-      title: Voĉdonantoj rajtas aldoni elektojn
-  poll_common_close_form:
-    close_dot_vote: Fermigi la punkto-voĉdonadon
-    dot_vote_closed: Fermiĝis la punkto-voĉdonado
   poll_common_votes_panel:
     no_votes_yet: Ĝis nun, neniu voĉdonis.
-  poll_common_set_outcome_panel:
-    dot_vote: 'Ĉi tiu punkto-voĉdonado fermiĝis. <storng>Konigu rezulton</strong> al la grupo.'
   poll_common_form:
     title: Titolo
     details: Detaloj
     closed: Fermita
+    stance_reason_required: Nepra
+    votes_are_anonymous: Voĉdonoj ne montros uzantnomojn
   poll_proposal_form:
     title_placeholder: 'Jen ekzemplo: Ni iru al la luno!'
   poll_poll_form:
     edit_header: Redakti enketon
     add_option_placeholder: Aldoni elekton
     remove_option: Forigi elekton
-  poll_dot_vote_form:
-    start_header: Komenci punkto-voĉdonadon
-    edit_header: Agordi la punkto-voĉdonadon
-    add_option_placeholder: Aldoni elekton
-    dot_vote_created: Komenciĝis la punkto-voĉdonado
-    dot_vote_updated: Ĝisdatiĝis la punkto-voĉdonado
-  poll_score_form:
-    add_option_placeholder: Aldoni elekton
   poll_meeting_time_field:
     closing_hour: Horo de fermo
   poll_proposal_vote_form:
@@ -584,17 +507,13 @@ eo:
     stance_updated: Voĉdono nun ĝisdatigita
     vote: Voĉdono
   poll_proposal_options:
+    'yes': 'Jes'
+    'no': 'Ne'
     agree: Konsenti
-    agree_verb: "Konsentita"
     disagree: Malkonsenti
-    disagree_verb: "malkonsentita"
   poll_count_options:
     'yes': 'Jes'
     'no': 'Ne'
-  poll_count_vote_form:
-    reason_label: Mesaĝo
-    stance_created: Voĉdono kreis
-    stance_updated: Voĉdono ĝisdatigita
   poll_meeting_chart_panel:
     total: Entute
   poll_poll_vote_form:
@@ -610,27 +529,34 @@ eo:
   poll_dot_vote_vote_form:
     stance_created: Voĉdono kreis
     stance_updated: Voĉdono ĝisdatigita
+  poll_templates:
+    proposal:
+      agree: Konsenti
+      disagree: Malkonsenti
+    advice:
+      agree: Konsenti
+    consensus:
+      agree: Konsenti
+      disagree: Malkonsenti
   auth_form:
+    sign_in_to_loomio: Ensaluti al %{site_name}.
     sign_in: Registriĝi
     create_account: Krei konton
-    sign_in_as: Registriĝi kiel {{name}}
+    sign_in_as: Registriĝi kiel %{name}
     more_providers: Pli
     name_placeholder: Via nomo
     name_required: Bonvolu entajpi nomon.
-    hello: "Saluton, {{name}}!"
+    hello: "Saluton, %{name}!"
     link_accounts: Ligi kontojn
     name: Nomo
     email: Retadreso
     password: Pasvorto
+  chatbot:
+    username: Uzantnomo
+    password: Pasvorto
   webhook:
     name_label: Nomo
-  browser_warning:
-    link: Bonvolu komuti al alia retumilo
   group_survey:
     categories:
       community: Komunuma grupo
-      other: Alia
-    uses:
-      other: Alia
-    referrers:
       other: Alia

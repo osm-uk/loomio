@@ -9,10 +9,9 @@ id:
     export:
       title: Judul
       author: Penulis
+      email: Surel
       details: Keterangan
   email:
-    group_email:
-      intro: "%{who} membuat pengumuman di dalam %{group}:"
     unsubscribe: 'Tidak ingin berlanggan atau ganti alamat surel:'
     unsubscribe_html: "<a href='%{link_path}'>%{link_text}</a> untuk ubah langganan atau ganti alamat surel."
     catch_up:

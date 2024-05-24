@@ -3,8 +3,6 @@ mi:
     members: "Ngā Mema"
   loomio_tags:
     name_label: Ingoa
-  reactions:
-    slight_smile: Rawe
   common:
     expand: Whakanui
     ok_got_it: Kei te pai, kua mau
@@ -15,8 +13,8 @@ mi:
     time:
       am: i te ata
       pm: i te ahiahi
-    closing_in: 'Ko te wā kāti {{time}}'
-    closed_ago: 'I kāti i {{time}}'
+    closing_in: 'Ko te wā kāti %{time}'
+    closed_ago: 'I kāti i %{time}'
     volume: 'Te kaha o te reo'
     notification_volume: 'Tohu kaha o te reo'
     group: 'Rōpū'
@@ -41,8 +39,6 @@ mi:
       thismonth: 'I tenei marama'
       older: 'no mua noa atu'
     more_help: 'He awhina ano'
-    models:
-      proposal: 'Tono'
     copy: 'Tārua'
     copy_text: 'Tārua kuputuhi'
     copied: 'Kua taruatia ki te papa whakapine'
@@ -103,9 +99,6 @@ mi:
       label: Ngā kōrero pūrongo
     aria_label: "Whakahuritia ngā kōwhiringa īmēra"
     mute_label: "Whakahāngūtia"
-  mute_explanation_modal:
-    aria_label: Whakahāngūtia te miro
-    mute_thread: Whakahāngūtia te miro
   inbox:
     latest: 'Hou ake'
     unread: 'Kāhore anō kia kitea'
@@ -197,7 +190,6 @@ mi:
     delete_thread: 'Mukua'
   decision_tools_card:
     proposal_title: He whakatakoto
-    count_title: Whakatika
     poll_title: Pōti
   poll_common:
     save_changes: Tiaki
@@ -216,14 +208,10 @@ mi:
     start: Tīmatatia
   poll_meeting_chart_panel:
     total: Tapeke
-  poll_common_subscribe_form:
-    subscribe: Ohauru
+  chatbot:
+    password: Kupuhipa
   webhook:
     name_label: Ingoa
   group_survey:
     categories:
-      other: Ētahi atu
-    uses:
-      other: Ētahi atu
-    referrers:
       other: Ētahi atu

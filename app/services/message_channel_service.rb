@@ -1,7 +1,7 @@
 class MessageChannelService
   def self.publish_models(models, serializer: nil, scope: {}, root: nil, group_id: nil, user_id: nil)
     cache = RecordCache.for_collection(models, user_id)
-    data = serialize_models(models, serializer: serializer, scope: scope.merge(cache: cache), root: root)
+    data = serialize_models(models, serializer: serializer, scope: scope.merge(cache: cache, current_user_id: user_id), root: root)
     publish_serialized_records(data, group_id: group_id, user_id: user_id)
   end
 
@@ -14,7 +14,7 @@ class MessageChannelService
   end
 
   def self.publish_serialized_records(data, group_id: nil, user_id: nil)
-    CHANNELS_REDIS_POOL.with do |client|
+    CACHE_REDIS_POOL.with do |client|
       room = "user-#{user_id}" if user_id
       room = "group-#{group_id}" if group_id
       data_str = data.as_json.as_json
@@ -26,9 +26,11 @@ class MessageChannelService
     end
   end
 
-  def self.publish_system_notice(notice)
-    CHANNELS_REDIS_POOL.with do |client|
-      client.publish("/system_notice", {notice: notice}.to_json)
+  def self.publish_system_notice(notice, reload = false)
+    CACHE_REDIS_POOL.with do |client|
+      client.publish("/system_notice", {version: Loomio::Version.current,
+                                        notice: notice,
+                                        reload: reload}.to_json)
     end
   end
 end

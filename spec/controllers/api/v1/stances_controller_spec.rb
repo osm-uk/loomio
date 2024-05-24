@@ -14,8 +14,6 @@ describe API::V1::StancesController do
     stance_choices_attributes: [{poll_option_id: poll_option.id}],
     reason: "here is my stance"
   }}
-  let(:public_poll) { create :poll, discussion: nil, anyone_can_participate: true }
-  let(:public_poll_option) { create :poll_option, poll: public_poll }
 
   describe 'stance actions' do
     let(:actor) { create :user }
@@ -118,16 +116,6 @@ describe API::V1::StancesController do
       expect(json['stances'][1]['id']).to eq old_stance.id
     end
 
-    it 'can order by undecided' do
-      sign_in user
-      recent_stance; old_stance; undecided_stance
-      get :index, params: { poll_id: poll.id, order: "cast_at DESC NULLS FIRST"}
-      expect(response.status).to eq 200
-      json = JSON.parse(response.body)
-      expect(json['stances'][0]['id']).to eq undecided_stance.id
-      expect(json['stances'][1]['id']).to eq recent_stance.id
-    end
-
     it 'anonymous does not reveal participant for other peoples votes' do
       my_stance    = create(:stance, participant: user, poll: poll)
       other_stance = create(:stance, poll: poll)
@@ -140,7 +128,7 @@ describe API::V1::StancesController do
       user_ids   = json['stances'].map { |u| u['participant_id'] }
 
       expect(stance_ids).to include my_stance.id
-      expect(json['stances'].find{|s| s['my_stance']}['id'] ).to eq my_stance.id
+      expect(json['polls'][0]['my_stance_id']).to eq my_stance.id
       expect(stance_ids).to include other_stance.id
       expect(user_ids).to_not include my_stance.participant_id
       expect(user_ids).to_not include other_stance.participant_id
@@ -161,6 +149,65 @@ describe API::V1::StancesController do
     it 'does not allow unauthorized users to get stances' do
       get :index, params: { poll_id: poll.id }
       expect(response.status).to eq 403
+    end
+  end
+
+  describe 'uncast' do
+    let(:poll)       { create :poll }
+    let(:voter)       { create :user, name: "voter", email: 'voter@example.com'}
+    let(:stance_params) {{
+      poll_id: poll.id,
+      stance_choices_attributes: [{poll_option_id: poll.poll_options.first.id}],
+      reason: "the season is the reason"
+    }}
+
+    describe "happy case" do
+      before do
+        sign_in voter
+        stances = PollService.invite(poll: poll, actor: poll.author, params: {recipient_emails: [voter.email]})
+        stance = stances.first
+        StanceService.update(stance: stance, actor: stance.participant, params: stance_params)
+      end
+
+      it 'sets cast_at to nil' do
+        stance = poll.stances.latest.find_by(participant_id: voter.id)
+        put :uncast, params: {id: stance.id}
+        expect(response.status).to eq 200
+        stance = poll.stances.latest.find_by(participant_id: voter.id)
+        expect(stance.cast_at).to eq nil
+      end
+    end
+
+    describe "another user's vote" do
+      before do
+        sign_in poll.author
+        stances = PollService.invite(poll: poll, actor: poll.author, params: {recipient_emails: [voter.email]})
+        stance = stances.first
+        StanceService.update(stance: stance, actor: stance.participant, params: stance_params)
+      end
+
+      it 'sets cast_at to nil' do
+        stance = poll.stances.where(participant_id: voter.id).last
+        put :uncast, params: {id: stance.id}
+        expect(response.status).to eq 404
+        expect(stance.reload.cast_at).to_not eq nil
+      end
+    end
+
+    describe "poll has closed" do
+      before do
+        sign_in voter
+        stances = PollService.invite(poll: poll, actor: poll.author, params: {recipient_emails: [voter.email]})
+        stance = stances.first
+        StanceService.update(stance: stance, actor: stance.participant, params: stance_params)
+      end
+
+      it 'sets cast_at to nil' do
+        poll.update(closed_at: Time.now)
+        stance = poll.stances.where(participant_id: voter.id).last
+        put :uncast, params: {id: stance.id}
+        expect(response.status).to eq 403
+      end
     end
   end
 
@@ -188,9 +235,9 @@ describe API::V1::StancesController do
     describe "verified user votes" do
       it "creates stance and updates name and email" do
         user.update(email_verified: true)
-        poll.add_guest! user, poll.author
+        stance = poll.add_guest! user, poll.author
         sign_in user
-        expect { post :create, params: {stance: stance_params } }.to_not change {ActionMailer::Base.deliveries.count}
+        expect { post :update, params: {id: stance.id, stance: stance_params } }.to_not change {ActionMailer::Base.deliveries.count}
         expect(user.stances.latest.count).to eq 1
         expect(response.status).to eq 200
         expect(user.reload.email_verified).to eq true
@@ -201,11 +248,11 @@ describe API::V1::StancesController do
       poll.update(anonymous: true)
       user.update(email_verified: true)
       sign_in user
-      poll.add_guest! user, poll.author
-      post :create, params: { stance: stance_params }
+      stance = poll.add_guest! user, poll.author
+      post :update, params: { id: stance.id, stance: stance_params }
       json = JSON.parse(response.body)
       expect(response.status).to eq 200
-      expect(json['stances'][0]['my_stance']).to be true
+      expect(json['polls'][0]['my_stance_id']).to be json['stances'][0]['id']
       expect(json['stances'][0]['participant_id']).to be nil
       expect(json['events'][0]['actor_id']).to be nil
     end
@@ -231,8 +278,8 @@ describe API::V1::StancesController do
       end
 
       it 'guest of poll can vote' do
-        poll.add_guest! user, poll.author
-        post :create, params: { stance: stance_params }
+        stance = poll.add_guest! user, poll.author
+        post :update, params: { id: stance.id, stance: stance_params }
         expect(response.status).to eq 200
       end
     end
@@ -257,25 +304,9 @@ describe API::V1::StancesController do
       end
 
       it 'guest of poll can vote' do
-        poll.add_guest! user, poll.author
-        post :create, params: { stance: stance_params }
+        stance = poll.add_guest! user, poll.author
+        post :update, params: { id: stance.id, stance: stance_params }
         expect(response.status).to eq 200
-      end
-    end
-
-    describe 'poll.anyone_can_participate = true' do
-      before do
-        poll.update(anyone_can_participate: true)
-        user
-      end
-
-      it 'logged in' do
-        # add to group and create stance
-        user.update(email_verified: true)
-        sign_in user
-        expect { post :create, params: { stance: stance_params} }.to change { Stance.count }.by(1)
-        expect(Stance.last.participant).to eq user
-        expect(poll.members).to include user
       end
     end
 
@@ -294,6 +325,7 @@ describe API::V1::StancesController do
           stance_choices_attributes: [],
           reason: "here is my stance"
         }
+        post :create, params: { stance: stance_params} 
         expect { post :create, params: { stance: stance_params} }.to_not change { Stance.count }
         expect(response.status).to eq 422
       end
@@ -332,7 +364,7 @@ describe API::V1::StancesController do
     it 'updates existing stances' do
       sign_in user
       old_stance
-      expect { post :create, params: { stance: stance_params } }.to change { Stance.count }.by(0)
+      expect { post :update, params: {id: old_stance.id, stance: stance_params } }.to change { Stance.count }.by(0)
       expect(response.status).to eq 200
       expect(old_stance.reload.latest).to eq true
     end
@@ -343,7 +375,7 @@ describe API::V1::StancesController do
       expect(response.status).to eq 403
     end
 
-    it 'does not allow creating an invalid stance' do
+    it 'validates minimum stance choices' do
       sign_in user
       stance_params[:poll_id] = proposal.id
       stance_params[:stance_choices_attributes] = []

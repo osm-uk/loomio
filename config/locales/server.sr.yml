@@ -1,4 +1,7 @@
 sr:
+  discussion_templates:
+    discuss_a_topic:
+      title_placeholder: Koja je tema o kojoj želiš diskutovati?
   group:
     stats:
       members: Članovi
@@ -12,12 +15,9 @@ sr:
     export:
       title: Naslov
       author: Autor
+      email: ePoruka
       details: Detalji
       group_name: Naziv Grupe
-  validate:
-    motion:
-      must_close_in_future: Predlog se mora zatvoriti u budućnosti.
-      one_at_a_time: Postoji još jedan aktivan predlog.
   email:
     reset_password:
       greeting: |
@@ -28,9 +28,6 @@ sr:
           Dobili ste ovo jer je Vaša eAdresa upisana u "Zaboravljena lozinka" formular na %{hostname}.
           Svejedno, Vaša lozika neće biti promenjena dok ne odete na adresu iznad i unesete novu i prosledite je.
           Ako i dalje imate problem sa pristupom, odgovorite na ovu ePoruku da kontaktirate osobu koja će Vam pružiti podršku.
-    custom: "%{text}"
-    group_email:
-      intro: "%{who} je napravio/la objavu za grupu %{group}:"
     by_who: od strane %{person}
     reply_to_this_discussion: Odgovori u ovoj diskusiji
     view_group: Vidi grupu
@@ -43,7 +40,7 @@ sr:
       content: "%{who} Vas je dodao/la u %{which_group}."
       content_html: "<strong>%{who}</strong> Vas je dodao/la u <strong>%{which_group}</strong>."
       link_help: "Škljocnite na adresu ispod da odete do grupe:"
-    unsubscribe: 'Odjavite se ili promenite podešavanja ePošte'
+    unsubscribe: "Odjavite se ili promenite podešavanja ePošte"
     unsubscribe_html: "<a href='%{link_path}'>%{link_text}</a> za odjavu sa liste za obaveštenja ili promenu podešavanja Vaše ePošte."
     catch_up:
       mark_as_read: Označi kao pročitano
@@ -59,7 +56,7 @@ sr:
       subject: "%{who} je zatražio da se pridruži %{which_group}"
       view_group: Ovde možete odobriti ili odbiti zahtev
   discussion_mailer:
-    reply_or_view_online_html: Odgovori na ovu poruku direktno ili <a href='%{url}'>pogledaj je na %{hostname}</a>.
+    reply_or_view_online_html: "Odgovori na ovu poruku direktno ili <a href='%{url}'>pogledaj je na %{hostname}</a>."
     turn_off_notifications_html: "<a href='%{url}'>Isključi ePoruke</a> za ovu diskusiju."
   footer:
     about: O nama
@@ -75,42 +72,3 @@ sr:
     reset_email_timeframe: Molim sačekajte do 5 minuta da ePoruka stigne. Ako se ne pojavi, uverite se da ste proverili i svoj spam direktorijum.
     length_restriction: Lozinke moraju biti najmanje 8 znakova duge.
     forbidden_passwords: Česte lozinke kao što je "lozinka" su zabranjene kako bi Vaš nalog bio siguran.
-  markdown:
-    intro:
-      title: |
-          # Šta je markdown?
-      body: |
-          Markdown je način pisanja običnog teksta (levo),
-          kako bi se mogao pretvoriti u bogatiji tekst (desno).
-
-          Ova stranica je napisana markdown načinom kao primer.
-    paragraphs:
-      title: |
-          ## Paragrafi
-      body: |
-          Moraš
-          ostaviti
-          praznu liniju
-          između linija.
-
-          Ili će se sve prikazati kao jedan veliki paragraf!
-    emphasis:
-      title: |
-          ## Isticanje
-      body: |
-          Možeš korisititi iskošenu reč sa _donjim_crtama_ ili *zvezdicama*.
-
-          __Podebljaj__ reč tako što ćeš duplirati **istaknutost**.
-    lists:
-      title: |
-          ## Liste
-      body: |
-          Ovako možeš napraviti listu:
-
-          * ostavi praznu liniju pre početka liste
-          * koristi zvezdice (*)
-          * stavi razmak posle zvezdice
-    links:
-      title: |
-          ## Veze i Slike
-  comment_by: Komentar od %{comment_author}

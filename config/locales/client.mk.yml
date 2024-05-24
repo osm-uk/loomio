@@ -1,9 +1,14 @@
 mk:
+  templates:
+    try_loomio: Пробај го Loomio
   subscription_status:
     members: "Членови"
   loomio_tags:
     name_label: Име
   common:
+    please_wait: Ве молиме почекајте
+    version: Верзија
+    or: или
     group: 'Група'
     groups: 'Групи'
     email_address: Електронска пошта
@@ -11,8 +16,6 @@ mk:
       public: 'Јавно'
     date_range:
       today: 'Денес'
-    models:
-      proposal: 'Предлог'
     action:
       search: 'Пребарувај'
       save: 'Зачувај'
@@ -53,6 +56,8 @@ mk:
       invitation_message_label: Порака
       poll_reminder:
         message_label: Порака
+      wip_poll_reminder:
+        message_label: Порака
   action_dock:
     edited: Изменето
   join_group_button:
@@ -90,6 +95,14 @@ mk:
     name_label: 'Име'
     email_label: 'Email'
     locale_label: 'Јазик'
+  email_settings_page:
+    monday: Понеделник
+    tuesday: Вторник
+    wednesday: Среда
+    thursday: Четврток
+    friday: Петок
+    saturday: Сабота
+    sunday: Недела
   dashboard_page:
     mark_as_read: Означи го како прочитано
     threads_from:
@@ -105,8 +118,6 @@ mk:
     close_thread: 'Затвори'
   delete_comment_dialog:
     title: 'Избриши го коментарот'
-    question: 'Дали си сигурен/а дека сакаш да го избришиш коментарот?'
-    confirm: 'Избриши го коментарот'
   contact_message_form:
     name_label: 'Твоето име'
     subject_label: "Тема"
@@ -125,17 +136,18 @@ mk:
     closed: 'Затворено'
   poll_common_form:
     closed: Затворено
+  poll_proposal_options:
+    'yes': 'Да'
+    'no': 'Не'
   poll_count_options:
     'yes': 'Да'
     'no': 'Не'
   auth_form:
     name_placeholder: Твоето име
+  chatbot:
+    password: Лозинка
   webhook:
     name_label: Име
   group_survey:
     categories:
-      other: Друго
-    uses:
-      other: Друго
-    referrers:
       other: Друго

@@ -6,7 +6,6 @@ class CommentService
     return false unless comment.valid?
     comment.save!
     EventBus.broadcast('comment_create', comment, actor)
-    Events::CommentRepliedTo.publish!(comment) if comment.parent
     Events::NewComment.publish!(comment)
   end
 
@@ -32,10 +31,14 @@ class CommentService
     actor.ability.authorize!(:destroy, comment)
     comment_id = comment.id
     discussion_id = comment.discussion.id
-    comment.destroy
 
-    Comment.where(parent_id: comment_id).update_all(parent_id: nil)
-    EventService.delay.repair_thread(discussion_id)
+    # you cannot delete a comment if it has replies
+    # but if you could, you'd need to delete all the children, or rehome them
+    # Comment.where(parent_id: comment.id, parent_type: 'Comment').destroy_all
+    # Comment.where(parent_id: comment.id, parent_type: 'Comment').update(parent: comment.parent)
+
+    comment.destroy
+    RepairThreadWorker.perform_async(discussion_id)
   end
 
   def self.update(comment:, params:, actor:)

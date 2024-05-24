@@ -9,19 +9,18 @@ class DiscussionReader < ApplicationRecord
   belongs_to :discussion
   belongs_to :inviter, class_name: 'User'
 
-  delegate :update_importance, to: :discussion
-  delegate :importance, to: :discussion
   delegate :message_channel, to: :user
 
-  scope :not_revoked, -> { where("discussion_readers.revoked_at IS NULL") }
+  scope :dangling, -> { joins('left join discussions on discussions.id = discussion_id left join users on users.id = user_id').where('discussions.id is null or users.id is null') }
 
-  scope :guests, -> { where("discussion_readers.inviter_id IS NOT NULL
-                              AND discussion_readers.revoked_at IS NULL") }
-  scope :admins, -> { guests.where('discussion_readers.admin': true) }
+  scope :active, -> { where("discussion_readers.revoked_at IS NULL") }
 
-  scope :redeemable, -> { where('discussion_readers.inviter_id IS NOT NULL
-                            AND discussion_readers.accepted_at IS NULL
-                            AND discussion_readers.revoked_at IS NULL') }
+  scope :guests, -> { active.where('discussion_readers.guest': true) }
+  scope :admins, -> { active.where('discussion_readers.admin': true) }
+
+  scope :redeemable, -> { guests.where('discussion_readers.accepted_at IS NULL') }
+
+  scope :redeemable_by, -> (user_id) { redeemable.joins(:user).where("user_id = ? OR users.email_verified = false", user_id) }
 
   update_counter_cache :discussion, :seen_by_count
   update_counter_cache :discussion, :members_count
@@ -85,6 +84,10 @@ class DiscussionReader < ApplicationRecord
 
   def discussion_reader_volume
     self[:volume]
+  end
+
+  def discussion_reader_user_id
+    self.user_id
   end
 
   def read_ranges

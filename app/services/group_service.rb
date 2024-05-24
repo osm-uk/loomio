@@ -1,26 +1,66 @@
 module GroupService
-  def self.invite(group:, params:, actor:)
-    actor.ability.authorize! :announce, group
+  def self.remote_cover_photo
+    # id like to use unsplash api but need to work out how to meet their attribution requirements
+    filename = %w[
+      cover1.jpg
+      cover2.jpg
+      cover3.jpg
+      cover4.jpg
+      cover5.jpg
+      cover6.jpg
+      cover7.jpg
+      cover8.jpg
+      cover9.jpg
+      cover10.jpg
+      cover11.jpg
+      cover12.jpg
+      cover13.jpg
+      cover14.jpg
+    ].sample
+    Rails.root.join("public/theme/group_cover_photos/#{filename}")
+  end
 
+  def self.invite(group:, params:, actor:)
     group_ids = if params[:invited_group_ids]
-      Array(params[:invited_group_ids])
+      Array(params[:invited_group_ids]).map(&:to_i)
     else
       Array(group.id)
     end
 
-    groups = Group.where(id: group_ids).filter { |g| actor.can?(:add_members, g) }
+    # restrict group_ids to a single organization
+    parent_group = Group.where(id: group_ids).first.parent_or_self
+    group_ids = parent_group.id_and_subgroup_ids & group_ids
 
-    users = UserInviter.where_or_create!(actor: actor,
-                                         model: group,
-                                         emails: params[:recipient_emails],
-                                         user_ids: params[:recipient_user_ids])
+    UserInviter.authorize_add_members!(
+      parent_group: parent_group,
+      group_ids: group_ids,
+      emails: Array(params[:recipient_emails]),
+      user_ids: Array(params[:recipient_user_ids]),
+      actor: actor,
+    )
 
-    groups.each do |g|
-      memberships = users.map do |user|
-        Membership.new(inviter: actor, user: user, group: g, volume: 2)
+    users = UserInviter.where_or_create!(
+      actor: actor,
+      model: group,
+      emails: params[:recipient_emails],
+      user_ids: params[:recipient_user_ids]
+    )
+
+    Group.where(id: group_ids).each do |g|
+      revoked_memberships = Membership.revoked.where(group_id: g.id, user_id: users.map(&:id))
+      revoked_memberships.update_all(
+        inviter_id: actor.id,
+        accepted_at: nil,
+        revoked_at: nil,
+        revoker_id: nil,
+        admin: false,
+      )
+
+      new_memberships = users.map do |user|
+        Membership.new(inviter: actor, user: user, group: g, volume: user.default_membership_volume)
       end
 
-      Membership.import(memberships, on_duplicate_key_ignore: true)
+      Membership.import(new_memberships, on_duplicate_key_ignore: true)
 
       # mark as accepted all invitiations to people who are already part of the org.
       if g.parent
@@ -31,29 +71,31 @@ module GroupService
 
       g.update_pending_memberships_count
       g.update_memberships_count
+      GenericWorker.perform_async('PollService', 'group_members_added', g.id)
     end
 
-    # email should say, so and so has invited you to the following loomio groups.
-    # or so and so has added you to the following loomio groups.
-    all_memberships = Membership.not_archived.where(group_id: group.id, user_id: users.pluck(:id))
-    Events::AnnouncementCreated.publish!(group, actor, all_memberships, params[:message])
+    Events::MembershipCreated.publish!(
+      group: group,
+      actor: actor,
+      recipient_user_ids: users.pluck(:id),
+      recipient_message: params[:recipient_message]
+    )
 
-    EventBus.broadcast('group_invite', group, actor, all_memberships.size)
-
-    all_memberships
+    Membership.active.where(group_id: group.id, user_id: users.pluck(:id))
   end
 
-  def self.create(group:, actor: )
-    actor.ability.authorize! :create, group
+  def self.create(group:, actor: , skip_authorize: false)
+    actor.ability.authorize!(:create, group) unless skip_authorize
 
     return false unless group.valid?
 
     group.is_referral = actor.groups.size > 0
 
     if group.is_parent?
-      group.default_group_cover = DefaultGroupCover.sample
-      group.creator             = actor if actor.is_logged_in?
-      ExampleContent.new(group).add_to_group! if AppConfig.app_features[:example_content]
+      url = remote_cover_photo
+      group.cover_photo.attach(io: URI.open(url), filename: File.basename(url))
+      group.creator = actor if actor.is_logged_in?
+      group.subscription = Subscription.new
     end
 
     group.save!
@@ -78,9 +120,20 @@ module GroupService
 
   def self.destroy(group:, actor:)
     actor.ability.authorize! :destroy, group
+
+    group.admins.each do |admin|
+      GroupMailer.destroy_warning(group.id, admin.id, actor.id).deliver_later
+    end
+
     group.archive!
+
     DestroyGroupWorker.perform_in(2.weeks, group.id)
     EventBus.broadcast('group_destroy', group, actor)
+  end
+
+  def self.destroy_without_warning!(group_id)
+    Group.find(group_id).archive!
+    DestroyGroupWorker.perform_async(group_id)
   end
 
   def self.move(group:, parent:, actor:)

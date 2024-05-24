@@ -1,154 +1,209 @@
-<script lang="coffee">
-import Records           from '@/shared/services/records'
-import Session           from '@/shared/services/session'
-import EventBus          from '@/shared/services/event_bus'
-import AbilityService    from '@/shared/services/ability_service'
-import ThreadLoader      from '@/shared/loaders/thread_loader'
-import ahoy from '@/shared/services/ahoy'
+<script lang="js">
+import Records           from '@/shared/services/records';
+import Session           from '@/shared/services/session';
+import EventBus          from '@/shared/services/event_bus';
+import AbilityService    from '@/shared/services/ability_service';
+import ThreadLoader      from '@/shared/loaders/thread_loader';
 
-export default
-  data: ->
-    discussion: null
-    loader: null
-    position: 0
-    group: null
-    discussionFetchError: null
+export default {
+  data() {
+    return {
+      discussion: null,
+      loader: null,
+      position: 0,
+      group: null,
+      discussionFetchError: null,
+      lastFocus: null
+    };
+  },
 
-  mounted: -> @init()
+  mounted() { this.init(); },
 
-  watch:
-    '$route.params.key': 'init'
-    '$route.params.comment_id': 'init'
-    '$route.params.sequence_id': 'respondToRoute'
-    '$route.params.comment_id': 'respondToRoute'
-    '$route.query.p': 'respondToRoute'
+  watch: {
+    '$route.params.key': 'init',
+    '$route.params.comment_id': 'init',
+    '$route.params.sequence_id': 'respondToRoute',
+    '$route.params.comment_id': 'respondToRoute',
+    '$route.query.p': 'respondToRoute',
     '$route.query.k': 'respondToRoute'
+  },
 
-  methods:
-    init: ->
-      Records.samlProviders.authenticateForDiscussion(@$route.params.key)
-      Records.discussions.findOrFetchById(@$route.params.key, exclude_types: 'poll outcome')
-      .then (discussion) =>
-        window.location.host = discussion.group().newHost if discussion.group().newHost
-        @discussion = discussion
-        @loader = new ThreadLoader(@discussion)
-        @respondToRoute()
-        ahoy.trackView
-          discussionId: @discussion.id
-          groupId: @discussion.groupId
-          organisationId: @discussion.group().parentOrSelf().id
-          pageType: 'threadPage'
-        EventBus.$emit 'currentComponent',
-          focusHeading: false
-          page: 'threadPage'
-          discussion: @discussion
-          group: @discussion.group()
-          title: @discussion.title
+  methods: {
+    init() {
+      Records.discussions.findOrFetchById(this.$route.params.key, {exclude_types: 'poll outcome'})
+      .then(discussion => {
+        if (discussion.group().newHost) { window.location.host = discussion.group().newHost; }
+        this.discussion = discussion;
+        this.loader = new ThreadLoader(this.discussion);
+        this.respondToRoute();
+        EventBus.$emit('currentComponent', {
+          focusHeading: false,
+          page: 'threadPage',
+          discussion: this.discussion,
+          group: this.discussion.group(),
+          title: this.discussion.title
+        });
 
-        @watchRecords
-          key: 'strand'+@discussion.id
-          collections: ['events']
-          query: => @loader.updateCollection()
-      .catch (error) =>
-        EventBus.$emit 'pageError', error
-        EventBus.$emit 'openAuthModal' if error.status == 403 && !Session.isSignedIn()
+        this.watchRecords({
+          key: 'strand'+this.discussion.id,
+          collections: ['events'],
+          query: () => this.loader.updateCollection()
+        });
+      }).catch(function(error) {
+        EventBus.$emit('pageError', error);
+        if ((error.status === 403) && !Session.isSignedIn()) { EventBus.$emit('openAuthModal'); }
+      });
+    },
 
-    respondToRoute: ->
-      return unless @discussion
-      return if @discussion.key != @$route.params.key
-      return if @discussion.createdEvent.childCount == 0
-      @loader.reset()
+      // .catch (error) =>
+      //   EventBus.$emit 'pageError', error
+      //   EventBus.$emit 'openAuthModal' if error.status == 403 && !Session.isSignedIn()
 
-      if @$route.query.k
-        @loader.addLoadPositionKeyRule(@$route.query.k)
-        @loader.focusAttrs = {positionKey: @$route.query.k}
+    focusSelector() {
+      if (this.loader.focusAttrs.newest) {
+        if (this.discussion.lastSequenceId()) {
+          return `.sequenceId-${this.discussion.lastSequenceId()}`;
+        } else {
+          return "#add-comment";
+        }
+      }
 
-      if @$route.query.p
-        @loader.addLoadPositionRule(parseInt(@$route.params.p))
-        @loader.focusAttrs = {position: @$route.query.p}
+      if (this.loader.focusAttrs.unread) {
+        if (this.loader.firstUnreadSequenceId()) {
+          return `.sequenceId-${this.loader.firstUnreadSequenceId()}`;
+        } else {
+          return '.context-panel';
+        }
+      }
 
-      if @$route.params.sequence_id
-        @loader.addLoadSequenceIdRule(parseInt(@$route.params.sequence_id))
-        @loader.focusAttrs = {sequenceId: parseInt(@$route.params.sequence_id)}
+      if (this.loader.focusAttrs.oldest) {
+        return '.context-panel';
+      }
 
-      if @$route.query.comment_id
-        @loader.addLoadCommentRule(parseInt(@$route.params.comment_id))
-        @loader.focusAttrs = {commentId: parseInt(@$route.query.comment_id)}
+      if (this.loader.focusAttrs.commentId) {
+        return `#comment-${this.loader.focusAttrs.commentId}`;
+      }
 
-      if @loader.rules.length == 0
-        # # never read, or all read?
-        # # console.log "0 rules"
-        # console.log "ranges", @discussion.ranges
-        # console.log "readRanges", @discussion.readRanges
-        # console.log "@discussion.unreadItemsCount()", @discussion.unreadItemsCount()
-        if @discussion.lastReadAt
-          if @discussion.unreadItemsCount() == 0
-            @loader.addLoadNewestRule()
-            @loader.focusAttrs = {newest: 1}
-          else
-            @loader.addLoadUnreadRule()
-            @loader.focusAttrs = {unread: 1}
-        else
-          @loader.addLoadOldestRule()
-          @loader.focusAttrs = {oldest: 1}
+      if (this.loader.focusAttrs.sequenceId) {
+        return `.sequenceId-${this.loader.focusAttrs.sequenceId}`;
+      }
 
-      if @discussion.itemsCount <= @loader.padding
-        @loader.rules = []
-        @loader.loadEverything()
+      if (this.loader.focusAttrs.position) {
+        return `.position-${this.loader.focusAttrs.position}`;
+      }
 
-      @loader.addContextRule()
-      # console.log 'fetching', @loader.focusAttrs, @loader.rules
-      @loader.fetch().finally =>
-        setTimeout =>
-          if @loader.focusAttrs.newest
-            if @discussion.lastSequenceId()
-              @scrollTo ".sequenceId-#{@discussion.lastSequenceId()}"
-            else
-              @scrollTo ".context-panel"
+      if (this.loader.focusAttrs.positionKey) {
+        return `.positionKey-${this.loader.focusAttrs.positionKey}`;
+      }
+    },
 
-          if @loader.focusAttrs.unread
-            # how do we know when the context was updated?
-            if @loader.firstUnreadSequenceId()
-              # console.log 'scroll to unread items'
-              @scrollTo ".sequenceId-#{@loader.firstUnreadSequenceId()}"
-            else
-              # console.log 'scroll to unread context'
-              @scrollTo '.context-panel'
+    scrollToFocusIfPresent() {
+      const selector = this.focusSelector();
+      if (document.querySelector(selector)) {
+        this.scrollTo(selector);
+        this.lastFocus = selector;
+      }
+    },
 
-          if @loader.focusAttrs.oldest
-            # console.log 'scroll to oldest, context'
-            @scrollTo '.context-panel'
+    scrollToFocusUnlessFocused() {
+      const selector = this.focusSelector();
+      if (this.lastFocus !== selector) {
+        this.scrollTo(selector);
+        this.lastFocus = selector;
+      }
+    },
 
-          if @loader.focusAttrs.commentId
-            # console.log 'scroll to comment'
-            @scrollTo ".commendId-#{@loader.focusAttrs.commentId}"
+    elementInView(el) {
+      const rect = el.getBoundingClientRect();
+      return ((rect.top >= 0) && (rect.left >= 0) &&
+       (rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)) &&
+       (rect.right <= (window.innerWidth || document.documentElement.clientWidth)));
+    },
 
-          if @loader.focusAttrs.sequenceId
-            # console.log 'scroll to sequenceId'
-            @scrollTo ".sequenceId-#{@loader.focusAttrs.sequenceId}"
+    refocusIfOffscreen() {
+      let el;
+      if (this.lastFocus &&
+         (el = document.querySelector(this.lastFocus) &&
+         !this.elementInView(el))) {
+        console.log(`refocusing ${this.lastFocus}`);
+        this.scrollTo(this.lastFocus);
+      }
+    },
 
-          if @loader.focusAttrs.position
-            @scrollTo ".position-#{@loader.focusAttrs.position}"
+    respondToRoute() {
+      if (!this.discussion) { return; }
+      if (this.discussion.key !== this.$route.params.key) { return; }
+      if (this.discussion.createdEvent.childCount === 0) { return; }
 
-          if @loader.focusAttrs.positionKey
-            @scrollTo ".positionKey-#{@loader.focusAttrs.positionKey}"
-      .catch (res) =>
-        console.log 'promises failed', res
+      if (this.$route.query.k) {
+        this.loader.addLoadPositionKeyRule(this.$route.query.k);
+        this.loader.focusAttrs = {positionKey: this.$route.query.k};
+      }
+
+      if (this.$route.query.p) {
+        this.loader.addLoadPositionRule(parseInt(this.$route.params.p));
+        this.loader.focusAttrs = {position: this.$route.query.p};
+      }
+
+      if (this.$route.params.sequence_id) {
+        this.loader.addLoadSequenceIdRule(parseInt(this.$route.params.sequence_id));
+        this.loader.focusAttrs = {sequenceId: parseInt(this.$route.params.sequence_id)};
+      }
+
+      if (this.$route.params.comment_id) {
+        this.loader.addLoadCommentRule(parseInt(this.$route.params.comment_id));
+        this.loader.addLoadNewestRule();
+        this.loader.focusAttrs = {commentId: parseInt(this.$route.params.comment_id)};
+      }
+
+      if (this.loader.rules.length === 0) {
+        if (this.discussion.newestFirst) {
+          this.loader.addLoadNewestRule();
+          this.loader.focusAttrs = {newest: 1};
+        } else {
+          if (this.discussion.lastReadAt) {
+            if (this.discussion.unreadItemsCount() === 0) {
+              this.loader.addLoadNewestRule();
+              this.loader.focusAttrs = {newest: 1};
+            } else {
+              this.loader.addLoadUnreadRule();
+              this.loader.focusAttrs = {unread: 1};
+            }
+          } else {
+            this.loader.addLoadOldestRule();
+            this.loader.focusAttrs = {oldest: 1};
+          }
+        }
+      }
+
+      this.loader.addContextRule();
+
+      this.scrollToFocusIfPresent();
+
+      this.loader.fetch().finally(() => {
+        setTimeout(() => this.scrollToFocusUnlessFocused());
+      }).catch(res => {
+        console.log('promises failed', res);
+      });
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
 .strand-page
   v-main
-    v-container.max-width-800(v-if="discussion")
-      //- p(v-for="rule in loader.rules") {{rule}}
+    v-container.max-width-800.px-0.px-sm-3(v-if="discussion")
+      //- p(v-if="$route.query.debug" v-for="rule in loader.rules") {{rule}}
       //- p loader: {{loader.focusAttrs}}
       //- p ranges: {{discussion.ranges}}
       //- p read ranges: {{loader.readRanges}}
       //- p first unread {{loader.firstUnreadSequenceId()}}
       //- p test: {{rangeSetSelfTest()}}
       thread-current-poll-banner(:discussion="discussion")
-      discussion-fork-actions(:discussion='discussion' :key="'fork-actions'+ discussion.id")
-      strand-card(v-if="loader" :discussion='discussion' :loader="loader")
-  strand-nav(v-if="loader" :discussion="discussion" :loader="loader")
+      discussion-fork-actions(:discussion='discussion', :key="'fork-actions'+ discussion.id")
+
+      strand-card(v-if="loader && loader.firstLoad", :loader="loader")
+  strand-toc-nav(v-if="loader", :discussion="discussion", :loader="loader", :key="discussion.id")
 </template>

@@ -1,20 +1,24 @@
-<script lang="coffee">
-import AppConfig from '@/shared/services/app_config'
+<script lang="js">
+import AppConfig from '@/shared/services/app_config';
 
-export default
-  data: ->
-    privacyUrl: AppConfig.theme.privacy_url
-    helpUrl: AppConfig.theme.help_url
-    termsUrl: AppConfig.theme.terms_url
-    frontPageUrl: AppConfig.baseUrl + "?frontpage"
-    showFrontPage: AppConfig.baseUrl != "https://www.loomio.org/"
+export default {
+  data() {
+    return {
+      privacyUrl: AppConfig.theme.privacy_url,
+      helpUrl: AppConfig.theme.help_url,
+      termsUrl: AppConfig.theme.terms_url,
+      hostname: AppConfig.theme.canonical_host,
+      poweredUrl: `https://www.loomio.com?utm_source=${AppConfig.theme.canonical_host}&utm_campaign=appfooter`
+    };
+  }
+};
 
 </script>
 <template lang="pug">
 v-footer
   v-layout(justify-space-around)
-    .powered-by.caption
-      a(href="https://www.loomio.org/?frontpage" v-t="'powered_by.powered_by_loomio'" target="_blank")
+    .powered-by.text-caption
+      a(:href="poweredUrl" v-t="'powered_by.powered_by_loomio'" target="_blank")
       span(v-if="privacyUrl")
         | &nbsp;
         mid-dot

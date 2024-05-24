@@ -8,11 +8,50 @@ class Outcome < ApplicationRecord
   include HasCreatedEvent
   include HasEvents
   include HasRichText
-
+  include Searchable
+  
+  def self.pg_search_insert_statement(id: nil, author_id: nil, discussion_id: nil, poll_id: nil)
+    content_str = "regexp_replace(CONCAT_WS(' ', outcomes.statement, users.name), E'<[^>]+>', '', 'gi')"
+    <<~SQL.squish
+      INSERT INTO pg_search_documents (
+        searchable_type,
+        searchable_id,
+        poll_id,
+        group_id,
+        discussion_id,
+        author_id,
+        authored_at,
+        content,
+        ts_content,
+        created_at,
+        updated_at)
+      SELECT 'Outcome' AS searchable_type,
+        outcomes.id AS searchable_id,
+        outcomes.poll_id AS poll_id,
+        polls.group_id as group_id,
+        polls.discussion_id AS discussion_id,
+        outcomes.author_id AS author_id,
+        outcomes.created_at as authored_at,
+        #{content_str} AS content,
+        to_tsvector('simple', #{content_str}) as ts_content,
+        now() AS created_at,
+        now() AS updated_at
+      FROM outcomes
+        LEFT JOIN users ON users.id = outcomes.author_id
+        LEFT JOIN polls ON polls.id = outcomes.poll_id
+      WHERE polls.discarded_at IS NULL 
+        #{id ? " AND outcomes.id = #{id.to_s.to_i} LIMIT 1" : ""}
+        #{author_id ? " AND outcomes.author_id = #{author_id.to_s.to_i}" : ""}
+        #{discussion_id ? " AND polls.discussion_id = #{discussion_id.to_s.to_i}" : ""}
+        #{poll_id ? " AND outcomes.poll_id = #{poll_id.to_s.to_i}" : ""}
+    SQL
+  end
   is_rich_text    on: :statement
 
-  set_custom_fields :calendar_invite, :event_summary, :event_description, :event_location, :should_send_calendar_invite
+  set_custom_fields :event_summary, :event_description, :event_location
 
+  scope :latest, -> { where(latest: true) }
+  scope :dangling, -> { joins('left join polls on polls.id = poll_id').where('polls.id is null') }
   scope :in_organisation, -> (group) { joins(:poll).where('polls.group_id': group.id_and_subgroup_ids) }
   belongs_to :poll, required: true
   belongs_to :poll_option, required: false
@@ -22,7 +61,7 @@ class Outcome < ApplicationRecord
 
   %w(
     title poll_type dates_as_options group group_id discussion discussion_id
-    locale mailer anyone_can_participate members admins
+    locale mailer members admins discarded? tags
   ).each { |message| delegate message, to: :poll }
 
   is_mentionable on: :statement
@@ -41,8 +80,20 @@ class Outcome < ApplicationRecord
                     events.kind           = 'outcome_review_due')")
   end
 
+  def author_name
+    author.name
+  end
+
   def user_id
     author_id
+  end
+
+  def body
+    statement
+  end
+
+  def body=(val)
+    self.statement = val
   end
 
   def body_format
@@ -59,8 +110,9 @@ class Outcome < ApplicationRecord
     .pluck(:"users.email").flatten.compact.uniq
   end
 
-  def store_calendar_invite
-    self.calendar_invite = CalendarInvite.new(self).to_ical
+  def calendar_invite
+    return nil unless self.poll_option && self.dates_as_options
+    CalendarInvite.new(self).to_ical
   end
 
   def has_valid_poll_option

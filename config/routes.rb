@@ -10,9 +10,13 @@ end
 
 require 'sidekiq/web'
 
-Loomio::Application.routes.draw do
+Rails.application.routes.draw do
+  get "/up", to: proc { [200, {}, ["ok"]] }, as: :rails_health_check
+  
   authenticate :user, lambda { |u| u.is_admin? } do
-    mount Sidekiq::Web => '/sidekiq'
+    mount Sidekiq::Web => '/admin/sidekiq'
+    mount Blazer::Engine, at: "/admin/blazer"
+    # mount PgHero::Engine, at: "/admin/pghero"
   end
 
   if !Rails.env.production?
@@ -26,9 +30,6 @@ Loomio::Application.routes.draw do
     end
   end
 
-  mount Ahoy::Engine => "/bhoy", as: :bhoy if Ahoy.api
-  mount AhoyEmail::Engine => "/bhoy", as: :bhoyemail
-
   get '/discussions/:id', to: 'redirect#discussion'
   get '/groups/:id',      to: 'redirect#group'
 
@@ -40,22 +41,54 @@ Loomio::Application.routes.draw do
     namespace :b1 do
       resources :discussions, only: [:create, :show]
       resources :polls, only: [:create, :show]
-      resources :memberships, only: [:index]
+      resources :memberships, only: [:index, :create]
+    end
+    
+    namespace :b2 do
+      resources :discussions, only: [:create, :show]
+      resources :polls, only: [:create, :show]
+      resources :memberships, only: [:index, :create]
+    end
+
+    namespace :b3, only: [] do
+      resources :users do
+        collection do
+          post :deactivate
+          post :reactivate
+        end
+      end
     end
 
     namespace :v1 do
-      resources :saml_providers, only: [:create, :destroy, :index]
+      resources :trials, only: [:create]
       resources :attachments, only: [:index, :destroy]
       resources :webhooks, only: [:create, :destroy, :index, :update]
+      resources :chatbots, only: [:create, :destroy, :index, :update] do
+        post :test, on: :collection
+      end
 
       resources :boot, only: [] do
         get :site, on: :collection
         get :user, on: :collection
+        get :version, on: :collection
       end
 
-      resources :group_surveys, only: [:create]
+      resources :demos, only: [:index] do
+        post :clone, on: :collection
+      end
 
-      resources :usage_reports, only: [:create]
+      resources :link_previews, only: [:create]
+
+      resources :tasks, only: [:index] do
+        collection do
+          post :update_done
+        end
+
+        member do
+          post :mark_as_done
+          post :mark_as_not_done
+        end
+      end
 
       resources :groups, only: [:index, :show, :create, :update, :destroy] do
         member do
@@ -63,6 +96,7 @@ Loomio::Application.routes.draw do
           post :reset_token
           get :subgroups
           post :export
+          post :export_csv
           post 'upload_photo/:kind', action: :upload_photo
         end
         collection do
@@ -73,6 +107,7 @@ Loomio::Application.routes.draw do
 
       resources :memberships, only: [:index, :create, :update, :destroy] do
         collection do
+          post :user_name
           post :join_group
           get :for_user
           get :autocomplete, action: :index
@@ -99,22 +134,26 @@ Loomio::Application.routes.draw do
         post :ignore, on: :member
       end
 
-      resources :profile, only: [:show] do
+      resources :profile, only: [:show, :index] do
         collection do
           get  :time_zones
+          get  :all_time_zones
           get  :mentionable_users
           get  :me
           get  :groups
           get  :email_status
           get  :email_exists
           get  :send_merge_verification_email
+          get  :contactable
+          get  :avatar_uploaded
+          get  :email_api_key
+          post :reset_email_api_key
           post :update_profile
           post :set_volume
           post :upload_avatar
-          post :deactivate
-          post :reactivate
           post :save_experience
           delete :destroy
+          post :deactivate
         end
         post :remind, on: :member
       end
@@ -126,10 +165,11 @@ Loomio::Application.routes.draw do
         patch :unpin, on: :member
         get :comment, on: :collection
         get :position_keys, on: :collection
+        get :timeline, on: :collection
         patch :remove_from_thread, on: :member
       end
 
-      resources :discussions, only: [:show, :index, :create, :update, :destroy] do
+      resources :discussions, only: [:show, :index, :create, :update] do
         patch :mark_as_seen, on: :member
         patch :dismiss, on: :member
         patch :recall, on: :member
@@ -149,13 +189,24 @@ Loomio::Application.routes.draw do
         patch :unpin_reader, on: :member
         patch :move, on: :member
         delete :discard, on: :member
-        post  :fork, on: :collection
         patch :move_comments, on: :member
         get :history, on: :member
         get :search, on: :collection
         get :dashboard, on: :collection
         get :inbox, on: :collection
         get :direct, on: :collection
+      end
+
+      resources :discussion_templates, only: [:create, :index, :show, :update, :destroy] do
+        collection do
+          get :browse_tags
+          get :browse
+          post :hide
+          post :unhide
+          post :discard
+          post :undiscard
+          post :positions
+        end
       end
 
       resources :discussion_readers, only: [:index] do
@@ -167,30 +218,56 @@ Loomio::Application.routes.draw do
         end
       end
 
+      resources :received_emails, only: [:index] do
+        collection do
+          get :aliases
+          delete :destroy_alias
+        end
+        
+        member do
+          post :allow
+          post :block
+        end
+      end
+
       resources :tags, only: [:create, :update, :destroy] do
         collection do
           post :priority
         end
       end
 
-
       resources :search, only: :index
 
-      resources :polls, only: [:show, :index, :create, :update, :destroy] do
+      resources :polls, only: [:show, :index, :create, :update] do
         member do
           post :remind
           delete :discard
           post :close
           post :reopen
-          post :add_options
           patch :add_to_thread
+          get :voters
         end
         get  :closed, on: :collection
       end
 
-      resource :outcomes,     only: [:create, :update]
+      resources :poll_templates, only: [:index, :create, :update, :show, :destroy] do
+        collection do
+          post :hide
+          post :unhide
+          post :discard
+          post :undiscard
+          post :positions
+          post :settings
+        end
+      end
 
-      resources :stances, only: [:index, :create, :update, :destroy] do
+      resource :outcomes, only: [:create, :update]
+
+      resources :stances, only: [:index, :create, :update] do
+        member do
+          patch :uncast
+        end
+
         collection do
           get :invite
           get :users
@@ -233,17 +310,9 @@ Loomio::Application.routes.draw do
       end
 
       resources :contact_messages, only: :create
-      resources :contact_requests, only: :create
 
       resources :versions, only: [] do
         get :show, on: :collection
-      end
-
-      resources :oauth_applications, only: [:show, :create, :update, :destroy] do
-        post :revoke_access, on: :member
-        post :upload_logo, on: :member
-        get :owned, on: :collection
-        get :authorized, on: :collection
       end
 
       namespace(:sessions)        { get :unauthorized }
@@ -257,33 +326,49 @@ Loomio::Application.routes.draw do
     end
   end
 
+  get '/pie_chart', to: 'pie_chart#show'
   post '/direct_uploads', to: 'direct_uploads#create'
 
   get '/users/sign_in', to: redirect('/dashboard')
   get '/users/sign_up', to: redirect('/dashboard')
   devise_for :users
 
-  namespace(:subscriptions) do
-    post :webhook
+  resources :contact_messages, only: [:new, :create] do
+    get :show, on: :collection
   end
 
-  resources :received_emails, only: :create
-  post :email_processor, to: 'received_emails#reply'
+  resources :poll_templates, only: [] do
+    collection do
+      get :dump_i18n
+    end
+  end
+
+  resources :thread_templates, only: [] do
+    collection do
+      get :dump_i18n
+    end
+  end
+  
+  post :email_processor, to: 'received_emails#create'
 
   namespace :email_actions do
     get 'unfollow_discussion/:discussion_id/:unsubscribe_token', action: 'unfollow_discussion', as: :unfollow_discussion
     get 'mark_summary_email_as_read', action: 'mark_summary_email_as_read', as: :mark_summary_email_as_read
     get 'mark_discussion_as_read/:discussion_id/:event_id/:unsubscribe_token', action: 'mark_discussion_as_read', as: :mark_discussion_as_read
+    get 'mark_notification_as_read/:id/:unsubscribe_token', action: 'mark_notification_as_read', as: :mark_notification_as_read
   end
 
+  post '/bug_tunnel' => 'application#bug_tunnel'
 
   get '/robots'     => 'robots#show'
   get '/manifest'   => 'manifest#show', format: :json
-  get '/help/markdown' => 'help#markdown'
   get '/help/api'   => 'help#api'
+  get '/help/api2'   => 'help#api2'
+  get '/help/api3'   => 'help#api3'
 
-  get '/start_group', to: redirect('/g/new')
+  get '/start_group', to: redirect('/try')
 
+  get 'try'                                => 'application#index', as: :start_trial
   get 'dashboard'                          => 'application#index', as: :dashboard
   get 'dashboard/:filter'                  => 'application#index'
   get 'inbox'                              => 'application#index', as: :inbox
@@ -297,24 +382,33 @@ Loomio::Application.routes.draw do
   get 'apps/authorized'                    => 'application#index'
   get 'apps/registered/:id'                => 'application#index'
   get 'apps/registered/:id/:slug'          => 'application#index'
+  get 'g/:key/emails'                      => 'application#index', as: :group_emails
   get 'g/:key/membership_requests'         => 'application#index', as: :group_membership_requests
   get 'g/:key/members/requests'            => 'application#index', as: :group_members_requests
   get 'g/:key/memberships'                 => 'application#index', as: :group_memberships
   get 'g/:key/settings'                    => 'application#index', as: :group_settings
   get 'g/:key/previous_polls'              => 'application#index', as: :group_previous_polls
   get 'g/:key/memberships/:username'       => 'application#index', as: :group_memberships_username
+  get 'g/:key/tags(/:tag_name)'            => 'application#index', as: :group_tags
   get 'g/new'                              => 'application#index', as: :new_group
   get 'd/new'                              => 'application#index', as: :new_discussion
   get 'p/new(/:type)'                      => 'application#index', as: :new_poll
   get 'threads/direct'                     => 'application#index', as: :groupless_threads
-
+  get 'tasks'                              => 'application#index', as: :tasks
+  get 'poll_templates/new'                 => 'application#index'
+  get 'poll_templates/:id'                 => 'application#index'
+  get 'poll_templates/:id/edit'            => 'application#index'
+  get 'thread_templates/browse'            => 'application#index'
+  get 'thread_templates/new'               => 'application#index'
+  get 'thread_templates/:id'               => 'application#index'
+  get 'thread_templates/:id/edit'          => 'application#index'
   get 'g/:key/export'                      => 'groups#export',               as: :group_export
   get 'g/:key/stats'                       => 'groups#stats',                as: :group_stats
   get 'p/:key/export'                      => 'polls#export',                as: :poll_export
   get 'd/:key/export'                      => 'discussions#export',          as: :discussion_export
   get 'g/:key(/:slug)'                     => 'groups#show',                 as: :group
-  get 'd/:key(/:slug)(/:sequence_id)'      => 'discussions#show',            as: :discussion
-  get 's/:key(/:slug)(/:sequence_id)'      => 'discussions#show'
+  get 'd/:key/:slug(/:sequence_id)'        => 'discussions#show',            as: :discussion
+  get 'd/:key(/:slug)(/:sequence_id)'      => 'discussions#show',            as: :discussion_no_slug
   get 'd/:key/comment/:comment_id'         => 'discussions#show',            as: :comment
   get 'p/:key/unsubscribe'                 => 'polls#unsubscribe',           as: :poll_unsubscribe
   get 'p/:key(/:slug)'                     => 'polls#show',                  as: :poll
@@ -342,22 +436,10 @@ Loomio::Application.routes.draw do
   get '/favicon.ico'                       => 'application#ok'
   get '/wp-login.php'                      => 'application#ok'
   get '/crowdfunding_celebration'          => 'application#crowdfunding'
-  get '/brand-assets'                      => 'application#brand'
+  get '/crowdfunding'                      => 'application#crowdfunding'
+  get '/brand'                             => 'application#brand'
+  get '/sitemap.xml' => 'application#sitemap'
 
-
-  resources :saml_providers, only: [] do
-    collection do
-      get :auth
-      get :should_auth
-      get :invitation_created
-      post :callback
-    end
-
-    member do
-      get :metadata
-      get :logout
-    end
-  end
 
   Identities::Base::PROVIDERS.each do |provider|
     scope provider do
@@ -367,23 +449,12 @@ Loomio::Application.routes.draw do
     end
   end
 
-  scope :facebook do
-    get :webhook,                         to: 'identities/facebook#verify',   as: :facebook_verify
-    post :webhook,                        to: 'identities/facebook#webhook',  as: :facebook_webhook
-    get :webview,                         to: 'identities/facebook#webview',  as: :facebook_webview
-  end
-
-  scope :slack do
-    get  :install,                        to: 'identities/slack#install',     as: :slack_install
-    get  :authorized,                     to: 'identities/slack#authorized',  as: :slack_authorized
-    post :participate,                    to: 'identities/slack#participate', as: :slack_participate
-    post :initiate,                       to: 'identities/slack#initiate',    as: :slack_initiate
-  end
-
   scope :saml do
     post :oauth,                          to: 'identities/saml#create',   as: :saml_oauth_callback
     get :metadata,                        to: 'identities/saml#metadata', as: :saml_metadata
   end
+
+  mount LoomioSubs::Engine, at: "/" if Object.const_defined?('LoomioSubs')
 
   get ":id", to: 'groups#show', as: :group_handle
 end

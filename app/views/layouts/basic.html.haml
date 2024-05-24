@@ -3,16 +3,19 @@
   %head
     %title= AppConfig.theme[:site_name]
     %meta{charset: 'utf-8'}
-    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
-    %link{rel: "shortcut icon",    href: AppConfig.theme[:icon_src]}
+    %link{rel: 'stylesheet', href: '/roboto.css'}
+    %link{rel: "shortcut icon", href: AppConfig.theme[:icon_src]}
     = stylesheet_link_tag 'basic/all'
+    = stylesheet_link_tag 'web'
+    = stylesheet_link_tag 'marketing/all'
+    = render 'plausible'
   %body
-    %header
-      %a{href: '/'}
-        %img{style: 'max-width: 100%', src: AppConfig.theme[:app_logo_src]}
-    %main
+    .container
+      %header.d-flex.justify-center
+        %a{href: '/'}
+          %img{style: 'max-width: 128px', src: AppConfig.theme[:app_logo_src]}
+    .container
       = yield
-    %footer
-      - if @footer
-        = render @footer
-    = javascript_include_tag 'angular_ahoy' if AppConfig.app_features[:ahoy_tracking]
+
+    - if @footer
+      %footer= render @footer

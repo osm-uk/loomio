@@ -4,10 +4,23 @@ ActiveAdmin.register User do
   filter :name
   filter :username
   filter :email, as: :string
+  filter :email_newsletter
+  filter :email_verified
+  filter :sign_in_count
+  filter :detected_locale, as: :string
+  filter :time_zone
   filter :created_at
 
   scope :all
   scope :coordinators
+
+  csv do
+    column :name
+    column :email
+    column :email_newsletter
+    column :locale
+    column :time_zone
+  end
 
   controller do
     def permitted_params
@@ -27,6 +40,9 @@ ActiveAdmin.register User do
     column "No. of groups", :memberships_count
     column :deactivated_at
     column :email_verified
+    column :locale
+    column :time_zone
+    column :bot
     actions
   end
 
@@ -36,36 +52,9 @@ ActiveAdmin.register User do
       f.input :email, as: :string
       f.input :username, as: :string
       f.input :is_admin
+      f.input :bot, label: 'Bot account (do not add to polls)'
     end
     f.actions
-  end
-
-  collection_action :export_emails_deactivated do
-    emails = User.inactive.pluck :email
-    render plain: emails.join("\n")
-  end
-
-  collection_action :export_emails_fr do
-    emails = User.active.where("detected_locale ilike 'fr%'").pluck(:email)
-    render plain: emails.join("\n")
-  end
-
-  collection_action :export_emails_es do
-    query = %w[es ca an].map do |prefix|
-      "detected_locale ilike '#{prefix}%'"
-    end.join ' or '
-
-    emails = User.active.where(query).pluck(:email)
-    render plain: emails.join("\n")
-  end
-
-  collection_action :export_emails_other do
-    query = %w[fr es ca an].map do |prefix|
-      "detected_locale ilike '#{prefix}%'"
-    end.join ' or '
-
-    emails = User.active.where.not(query).pluck(:email)
-    render plain: emails.join("\n")
   end
 
   member_action :update, :method => :put do
@@ -74,6 +63,7 @@ ActiveAdmin.register User do
     user.email = params[:user][:email]
     user.username = params[:user][:username]
     user.is_admin = params[:user][:is_admin]
+    user.bot = params[:user][:bot]
     user.save
     redirect_to admin_users_path, :notice => "User updated"
   end
@@ -90,19 +80,29 @@ ActiveAdmin.register User do
     redirect_to admin_user_path(destination)
   end
 
+  member_action :redact, method: :put do
+    RedactUserWorker.perform_async(params[:id].to_i, current_user.id)
+    redirect_to admin_users_path, :notice => "User scheduled for deletion immediately"
+  end
+
   member_action :deactivate, method: :put do
-    DeactivateUserWorker.perform_async(params[:id])
+    DeactivateUserWorker.perform_async(params[:id].to_i, current_user.id)
     redirect_to admin_users_path, :notice => "User scheduled for deactivation immediately"
   end
 
   member_action :reactivate, method: :put do
-    UserService.delay.reactivate(params[:id])
+    GenericWorker.perform_async('UserService', 'reactivate', params[:id].to_i)
     redirect_to admin_users_path, :notice => "User scheduled for reactivation immediately"
   end
 
   member_action :delete_spam, method: :delete do
-    DestroyUserWorker.perform_async(params[:id])
-    redirect_to admin_users_path, :notice => "User scheduled for deletion immediately"
+    DestroyUserWorker.perform_async(params[:id].to_i)
+    redirect_to admin_users_path, :notice => "User scheduled for spam deletion immediately"
+  end
+
+  member_action :delete_identity, method: :post do
+    User.find(params[:id]).identities.find(params[:identity_id]).destroy
+    redirect_to admin_user_path(User.find(params[:id]))
   end
 
   show do |user|
@@ -112,24 +112,33 @@ ActiveAdmin.register User do
       end
     end
 
-    if user.deactivated_at.nil?
+    if !user.deactivated_at
       panel("Deactivate") do
-        button_to 'Deactivate User', deactivate_admin_user_path(user), method: :put, data: {confirm: 'Are you sure you want to deactivate this user?'}
+        button_to 'Deactivate User', deactivate_admin_user_path(user.id), method: :put, data: {confirm: 'Are you sure you want to deactivate this user? (this is reversable, user is not notified)'}
       end
     end
 
-    if user.deactivated_at.present?
+    if user.deactivated_at && user.name.present?
       panel("Reactivate") do
-        button_to 'Reactivate User', reactivate_admin_user_path(user), method: :put, data: {confirm: 'Are you sure you want to reactivate this user?'}
+        button_to 'Reactivate User', reactivate_admin_user_path(user.id), method: :put, data: {confirm: 'Are you sure you want to reactivate this user? (user is not notified)'}
       end
     end
 
-    panel("Destroy") do
-      button_to 'Destroy spam User', delete_spam_admin_user_path(user), method: :delete, data: {confirm: 'Are you sure you want to destroy this user and all their groups?'}
+    if !user.email.nil?
+      panel("Deactivate and Redact (delete personally identifying information)") do
+        button_to 'Redact user', redact_admin_user_path(user.id), method: :put, data: {confirm: 'Are you sure you want to redact this user? (this is permanent, the user will be notified by email)'}
+      end
+    end
+
+    panel("Delete spam account") do
+      [
+      p("Delete the user and any groups, threads, comments, votes they created. It will not groups or threads they are simply a member of."),
+      button_to('Destroy User', delete_spam_admin_user_path(user.id), method: :delete, data: {confirm: 'Are you sure you want to destroy this user and content they authored?'})
+      ].join.html_safe
     end
 
     panel("Memberships") do
-      table_for user.memberships.includes(:group, :user).order(:id).each do |m|
+      table_for user.all_memberships.includes(:group, :user).order(:id).each do |m|
         column :id
         column :group_name do |g|
           group = g.group
@@ -138,25 +147,28 @@ ActiveAdmin.register User do
         column :volume
         column :admin
         column :accepted_at
+        column :revoked_at
       end
     end
 
     render 'notifications', { notifications: Notification.includes(:event).where(user_id: user.id).order("id DESC").limit(30) }
-    render 'emails', { emails: Ahoy::Message.where(user_id: user.id).order("id DESC").limit(30) }
-    render 'visits', { visits: Ahoy::Visit.where(user_id: user.id).order("started_at DESC").limit(30) }
 
     panel("Identities") do
-      table_for user.identities.each do |identity|
+      table_for user.identities.each do |ui|
         column :id
         column :identity_type
         column :uid
         column :name
         column :email
+        column :destroy do |uii|
+          button_to 'delete', delete_identity_admin_user_path(ui.user), method: :post, params: {identity_id: uii.id}
+        end
       end
     end
 
     panel 'Merge into another user' do
       form action: merge_admin_user_path(user), method: :post do |f|
+        f.input type: :hidden, name: :authenticity_token
         f.label "Email address of final user account"
         f.input name: :destination_email
         f.input type: :submit, value: "Merge user"
@@ -167,10 +179,6 @@ ActiveAdmin.register User do
       a(href: login_as_admin_user_path(user), target: "_blank") do
         "Login as #{user.name}"
       end
-    end
-
-    panel 'experiences' do
-      p user.experiences
     end
   end
 end

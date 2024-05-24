@@ -15,7 +15,6 @@ class Dev::NightwatchController < Dev::BaseController
   include Dev::Scenarios::Notification
   include Dev::Scenarios::Profile
   include Dev::Scenarios::Tags
-  # include Dev::Scenarios::Legacy
 
   before_action :redis_flushall, except: [
     :last_email,
@@ -32,7 +31,7 @@ class Dev::NightwatchController < Dev::BaseController
 
 
   def redis_flushall
-    CHANNELS_REDIS_POOL.with do |client|
+    CACHE_REDIS_POOL.with do |client|
       client.flushall
     end
   end

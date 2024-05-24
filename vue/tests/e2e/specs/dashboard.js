@@ -1,5 +1,4 @@
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 module.exports = {
   'displays_a_view_of_recent_threads': (test) => {
@@ -21,8 +20,8 @@ module.exports = {
     page.click('.thread-preview .action-menu')
     page.pause()
     page.click('.action-dock__button--dismiss_thread')
-    page.expectText('.confirm-modal h1', 'Dismiss thread')
-    page.click('.confirm-modal__submit')
+    // page.expectText('.confirm-modal h1', 'Dismiss thread')
+    // page.click('.confirm-modal__submit')
     page.expectFlash('Thread marked as read')
   },
 

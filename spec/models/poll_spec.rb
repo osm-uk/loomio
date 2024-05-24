@@ -16,7 +16,8 @@ describe Poll do
 
   it 'does not allow higher minimum stance choices than number of poll options' do
     ranked_choice.minimum_stance_choices = ranked_choice.poll_options.length + 1
-    expect(ranked_choice).to_not be_valid
+    ranked_choice.valid?
+    expect(ranked_choice.minimum_stance_choices).to eq ranked_choice.poll_options.length
   end
 
   it 'allows closing dates in the future' do
@@ -45,40 +46,18 @@ describe Poll do
     let(:meeting) { create :poll_meeting }
 
     it 'orders by priority when non-meeting poll' do
-      poll.update(poll_option_names: [
-        'Orange',
-        'Apple',
-        'Pineapple'
-      ])
-      expect(poll.reload.poll_options.first.name).to eq 'Orange'
+      poll.update(poll_option_names: [ 'Orange', 'Apple' ])
+      expect(poll.poll_options.first.name).to eq 'Orange'
+      expect(poll.poll_options.second.name).to eq 'Apple'
+      expect(poll.poll_option_names).to eq [ 'Orange', 'Apple' ]
     end
 
     it 'orders by name when meeting poll' do
-      meeting.update(poll_option_names: [
-        '01-01-2018',
-        '01-01-2017',
-        '01-01-2016',
-      ])
-      expect(meeting.reload.poll_options.first.name).to eq '01-01-2016'
-    end
-  end
-
-  describe 'is_new_version?' do
-    before { poll.save }
-
-    it 'is a new version if title is changed' do
-      poll.title = "new title"
-      expect(poll.is_new_version?).to eq true
-    end
-
-    it 'is a new version if new poll option is added' do
-      poll.poll_option_names = "new_option"
-      expect(poll.is_new_version?).to eq true
-    end
-
-    it 'is not a new version if anyone_can_participate is changed' do
-      poll.anyone_can_participate = false
-      expect(poll.is_new_version?).to eq false
+      meeting.update(poll_option_names: [ '01-01-2018', '01-01-2017', '01-01-2016', ])
+      expect(meeting.poll_options.first.name).to eq '01-01-2016'
+      expect(meeting.poll_options.second.name).to eq '01-01-2017'
+      expect(meeting.poll_options.third.name).to eq '01-01-2018'
+      expect(meeting.reload.poll_option_names).to eq ['01-01-2016', '01-01-2017', '01-01-2018']
     end
   end
 
@@ -88,7 +67,7 @@ describe Poll do
 
     it 'includes guests' do
       expect {
-        Stance.create(poll: poll, participant: user)
+        Stance.create(poll: poll, participant: user, guest: true)
       }.to change { poll.members.count }.by(1)
     end
 
@@ -103,15 +82,27 @@ describe Poll do
     let(:poll) { create :poll, group: create(:group) }
     let(:user) { create :user }
 
-    it 'increments voters when a vote is created' do
+    it 'increments voters' do
       expect { create(:stance, poll: poll, participant: user) }.to change { poll.voters.count }.by(1)
+    end
+
+    it 'does not increment decided_voters' do
       expect { create(:stance, poll: poll, participant: user) }.to change { poll.decided_voters.count }.by(0)
+    end
+
+    it 'increments undecided_voters' do
       expect { create(:stance, poll: poll, participant: user) }.to change { poll.undecided_voters.count }.by(1)
     end
 
-    it 'increments participants when a vote is cast' do
+    it 'cast vote increments voters' do
       expect { create(:stance, poll: poll, choice: poll.poll_option_names.first, participant: user) }.to change { poll.voters.count }.by(1)
+    end
+
+    it 'cast vote increments decided_voters' do
       expect { create(:stance, poll: poll, choice: poll.poll_option_names.first, participant: user) }.to change { poll.decided_voters.count }.by(1)
+    end
+
+    it 'cast vote does not increment undecided voters' do
       expect { create(:stance, poll: poll, choice: poll.poll_option_names.first, participant: user) }.to change { poll.undecided_voters.count }.by(0)
     end
   end

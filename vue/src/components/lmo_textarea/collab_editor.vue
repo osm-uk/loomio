@@ -1,219 +1,311 @@
-<script lang="coffee">
-import Records from '@/shared/services/records'
-import Session from '@/shared/services/session'
-import AppConfig from '@/shared/services/app_config'
-import FileUploader from '@/shared/services/file_uploader'
-import FilesList from './files_list.vue'
-import EventBus from '@/shared/services/event_bus'
-import I18n from '@/i18n'
-import { convertToMd } from '@/shared/services/format_converter'
+<script lang="js">
+import Records from '@/shared/services/records';
+import Session from '@/shared/services/session';
+import AppConfig from '@/shared/services/app_config';
+import FileUploader from '@/shared/services/file_uploader';
+import FilesList from './files_list.vue';
+import EventBus from '@/shared/services/event_bus';
+import I18n from '@/i18n';
+import { convertToMd } from '@/shared/services/format_converter';
 
-import { Editor, EditorContent, EditorMenuBar } from 'tiptap'
+import Blockquote from '@tiptap/extension-blockquote';
+import Bold from '@tiptap/extension-bold';
+import BulletList from '@tiptap/extension-bullet-list';
+import CodeBlock from '@tiptap/extension-code-block';
+import Code from '@tiptap/extension-code';
+import Document from '@tiptap/extension-document';
+import Dropcursor from '@tiptap/extension-dropcursor';
+import GapCursor from '@tiptap/extension-gapcursor';
+import HardBreak from '@tiptap/extension-hard-break';
+import Heading from '@tiptap/extension-heading';
+import History from '@tiptap/extension-history';
+import HorizontalRule from '@tiptap/extension-horizontal-rule';
+import Italic from '@tiptap/extension-italic';
+import Link from '@tiptap/extension-link';
+import ListItem from '@tiptap/extension-list-item';
+import OrderedList from '@tiptap/extension-ordered-list';
+import Paragraph from '@tiptap/extension-paragraph';
+import Placeholder from '@tiptap/extension-placeholder';
+import Strike from '@tiptap/extension-strike';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
+import Table from '@tiptap/extension-table';
+// import TaskList from '@tiptap/extension-task-list'
+import {CustomTaskItem} from './extension_custom_task_item';
+import {CustomTaskList} from './extension_custom_task_list';
+import TextStyle from '@tiptap/extension-text-style';
+// import TextAlign from '@tiptap/extension-text-align'
+import Text from '@tiptap/extension-text';
+import Underline from '@tiptap/extension-underline';
+import {CustomMention} from './extension_mention';
+import {CustomImage} from './extension_image';
+import {Video} from './extension_image';
+import {Audio} from './extension_image';
+import {Iframe} from './extension_iframe';
 
-import { Blockquote, CodeBlock, HardBreak, HorizontalRule,
-  OrderedList, BulletList, ListItem, Table, TableHeader, TableCell,
-  TableRow, TodoList, Bold, Code, Italic, Link, Strike, Underline,
-  History, Mention, Placeholder, TrailingNode } from 'tiptap-extensions'
-import Collaboration from '@/shared/tiptap_extentions/collaboration.js'
+import { Editor, EditorContent, VueRenderer } from '@tiptap/vue-2';
 
-import ForeColor from '@/shared/tiptap_extentions/fore_color'
-import BackColor from '@/shared/tiptap_extentions/back_color'
-import FormatClear from '@/shared/tiptap_extentions/format_clear'
-import Align from '@/shared/tiptap_extentions/align'
-import Alignment from '@/shared/tiptap_extentions/alignment'
-import Paragraph from '@/shared/tiptap_extentions/paragraph'
-import Heading from '@/shared/tiptap_extentions/heading'
+import {getEmbedLink} from '@/shared/helpers/embed_link';
 
-import Iframe from './iframe'
-import TodoItem from './todo_item'
+import { CommonMentioning, HtmlMentioning, MentionPluginConfig } from './mentioning';
+import SuggestionList from './suggestion_list';
+import Attaching from './attaching';
+import {compact, uniq, throttle, difference, reject, uniqBy} from 'lodash-es';
+import TextHighlightBtn from './text_highlight_btn';
+import TextAlignBtn from './text_align_btn';
+import { TextAlign } from './extension_text_align';
+import { Highlight } from './extension_highlight';
 
-import { insertText } from 'tiptap-commands'
-import Image from '@/shared/tiptap_extentions/image.js'
-
-import {getEmbedLink} from '@/shared/helpers/embed_link.coffee'
-
-import { CommonMentioning, HtmlMentioning, MentionPluginConfig } from './mentioning.coffee'
-import SuggestionList from './suggestion_list'
-import Attaching from './attaching.coffee'
-import {compact} from 'lodash'
-import TextHighlightBtn from './text_highlight_btn'
-import TextAlignBtn from './text_align_btn'
-
-# import io from 'socket.io-client'
+const isValidHttpUrl = function(string) {
+  let url = undefined;
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return false;
+  }
+  return (url.protocol === 'http:') || (url.protocol === 'https:');
+};
 
 export default
-  mixins: [CommonMentioning, HtmlMentioning, Attaching]
-  props:
-    model: Object
-    field: String
-    label: String
-    placeholder: String
-    maxLength: Number
-    shouldReset: Boolean
+{
+  mixins: [CommonMentioning, HtmlMentioning, Attaching],
+  props: {
+    focusId: String,
+    model: Object,
+    field: String,
+    label: String,
+    placeholder: String,
+    maxLength: Number,
+    shouldReset: Boolean,
     autofocus: Boolean
+  },
 
-  components:
-    EditorContent: EditorContent
-    EditorMenuBar: EditorMenuBar
-    FilesList: FilesList
-    SuggestionList: SuggestionList
-    TextHighlightBtn: TextHighlightBtn
-    TextAlignBtn: TextAlignBtn
+  components: {
+    EditorContent,
+    TextAlignBtn,
+    TextHighlightBtn,
+    SuggestionList,
+    FilesList
+  },
 
-  data: ->
-    loading: true
-    socket: null
-    count: 0
-    editor: null
-    expanded: null
-    closeEmojiMenu: false
-    linkUrl: ""
-    iframeUrl: ""
-    linkDialogIsOpen: false
-    iframeDialogIsOpen: false
+  data() {
+    return {
+      loading: true,
+      socket: null,
+      count: 0,
+      editor: null,
+      expanded: false,
+      closeEmojiMenu: false,
+      linkUrl: "",
+      iframeUrl: "",
+      linkDialogIsOpen: false,
+      iframeDialogIsOpen: false,
+      fetchedUrls: []
+    };
+  },
 
-  computed:
-    format: ->
-      @model["#{@field}Format"]
+  computed: {
+    format() {
+      return this.model[`${this.field}Format`];
+    },
 
-  mounted: ->
-    @expanded = Session.user().experiences['html-editor.expanded']
-    @onInit({doc: null, version: 0})
-    # @socket = io(@tiptapAddress())
-    #   .on('init', (data) => @onInit(data))
-    #   .on('update', (data) =>
-    #     @editor.extensions.options.collaboration.update(data)
-    #     @editor.extensions.options.collaboration.updateCursors(data)
-    #   )
-    #   .on('getCount', (count) => @setCount(count))
-    #   .on('cursorupdate', (data) =>
-    #     this.editor.extensions.options.collaboration.updateCursors(data)
-    #   )
+    reasonTooLong() { 
+      return this.editor.getCharacterCount() >= this.maxLength;
+    }
+  },
 
-  watch:
+  mounted() {
+    EventBus.$on('focusEditor', focusId => { 
+      if (this.focusId === focusId) { return this.editor.commands.focus(); }
+    });
+
+    this.expanded = Session.user().experiences['html-editor.expanded'];
+    this.model.beforeSaves.push( () => this.updateModel() );
+    this.editor = new Editor({
+      editorProps: {
+        scrollThreshold: 100,
+        scrollMargin: 100
+      },
+      autofocus: this.autofocus,
+      extensions: [
+        Blockquote,
+        Bold,
+        BulletList,
+        CodeBlock,
+        CustomImage.configure({attachFile: this.attachFile, attachImageFile: this.attachImageFile}),
+        Video,
+        Audio,
+        Document,
+        Dropcursor,
+        GapCursor,
+        HardBreak,
+        Heading,
+        Highlight.configure({ multicolor: true }),
+        History,
+        HorizontalRule,
+        Italic,
+        Iframe,
+        Link,
+        ListItem,
+        OrderedList,
+        Paragraph,
+        Placeholder.configure({placeholder: () => this.placeholder}),
+        Strike,
+        Text,
+        Table,
+        TableHeader,
+        TableRow,
+        TableCell,
+        CustomTaskList,
+        CustomTaskItem,
+        CustomMention.configure(MentionPluginConfig.bind(this)()),
+        TextStyle,
+        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        Underline
+      ],
+      content: this.model[this.field],
+      onUpdate: () => {
+        if (this.maxLength) { this.checkLength(); }
+        if (this.model.isNew()) { this.scrapeLinkPreviews(); }
+      },
+      onCreate: () => {
+        if (this.model.isNew() && (this.editor.getCharacterCount() > 0) && this.autofocus) { this.editor.commands.focus('end'); }
+      }
+    });
+  },
+
+  watch: {
     'shouldReset': 'reset'
+  },
 
-  methods:
-    onInit: ({doc, version}) ->
-      @loading = false
-      @editor.destroy() if @editor
+  methods: {
+    openRecordVideoModal() {
+      EventBus.$emit('openModal', {
+        component: 'RecordVideoModal',
+        props: {
+          saveFn: this.mediaRecorded
+        }
+      }
+      );
+    },
 
-      @editor = new Editor
-        editorProps:
-          scrollThreshold: 100
-          scrollMargin: 100
-        extensions: [
-          new Link(),
-          new Mention(MentionPluginConfig.bind(@)()),
-          new Blockquote(),
-          new BulletList(),
-          new CodeBlock(),
-          new HardBreak(),
-          new Image({attachFile: @attachFile, attachImageFile: @attachImageFile}),
-          new Heading({ levels: [1, 2, 3] }),
-          new HorizontalRule(),
-          new ListItem(),
-          new OrderedList(),
-          new TodoItem(),
-          new TodoList(),
-          new Table(),
-          new TableHeader(),
-          new TableCell(),
-          new TableRow(),
-          new Bold(),
-          new Code(),
-          new Italic(),
-          new Strike(),
-          new Underline(),
-          new History(),
-          new Iframe(),
-          new ForeColor(),
-          new BackColor(),
-          new FormatClear(),
-          new Align(),
-          new Alignment(),
-          new Paragraph(),
-          new Placeholder({
-            emptyClass: 'is-empty',
-            emptyNodeText: @placeholder,
-            showOnlyWhenEditable: true,
-          }),
-          # new Collaboration({
-          #   socket: @socket,
-          #   user: Session.user()
-          #   version: version
-          #   debounce: 250
-          # })
-        ]
-        content: @model[@field] # doc
-        onUpdate: @updateModel
-        autoFocus: @autofocus
+    openRecordAudioModal() {
+      EventBus.$emit('openModal', {
+        component: 'RecordAudioModal',
+        props: {
+          saveFn: this.mediaRecorded
+        }
+      }
+      );
+    },
 
-      # @editor.setContent(@model[@field]) if version == 0
+    checkLength() {
+      this.model.saveDisabled = this.editor.getCharacterCount() > this.maxLength;
+    },
 
-      # setTimeout =>
-      #   if @$refs.editor && @$refs.editor.$el
-      #     @$refs.editor.$el.children[0].setAttribute("role", "textbox")
-      #     @$refs.editor.$el.children[0].setAttribute("aria-label", @placeholder) if @placeholder
+    setCount(count) {
+      this.count = count;
+    },
 
-    setCount: (count) ->
-      @count = count
+    tiptapAddress() {
+      if (this.model.isNew()) {
+        return compact([AppConfig.theme.channels_uri, 'tiptap', this.model.constructor.singular, 'new', this.model.groupId, this.model.discussionId, this.model.parentId, Session.user().secretToken]).join('/');
+      } else {
+        return [AppConfig.theme.channels_uri, 'tiptap', this.model.constructor.singular, this.model.id, (this.model.secretToken || Session.user().secretToken)].join('/');
+      }
+    },
 
-    tiptapAddress: ->
-      if @model.isNew()
-        compact([AppConfig.theme.channels_uri, 'tiptap', @model.constructor.singular, 'new', @model.groupId, @model.discussionId, @model.parentId, Session.user().secretToken]).join('/')
-      else
-        [AppConfig.theme.channels_uri, 'tiptap', @model.constructor.singular, @model.id, (@model.secretToken || Session.user().secretToken)].join('/')
+    selectedText() {
+      const {
+        state
+      } = this.editor;
+      const {
+        selection
+      } = this.editor.state;
+      const { from, to } = selection;
+      return state.doc.textBetween(from, to, ' ');
+    },
 
-    selectedText: ->
-      { selection, state } = @editor
-      { from, to } = selection
-      state.doc.textBetween(from, to, ' ')
+    reset() {
+      this.editor.chain().clearContent().run();
+      this.resetFiles();
+      this.model.beforeSave = () => this.updateModel();
+    },
 
-    reset: ->
-      @editor.clearContent()
-      @resetFiles()
+    convertToMd() {
+      if (confirm(I18n.t('formatting.markdown_confirm'))) {
+        this.updateModel();
+        convertToMd(this.model, this.field);
+        Records.users.saveExperience('html-editor.uses-markdown');
+      }
+    },
 
-    convertToMd: ->
-      if confirm I18n.t('formatting.markdown_confirm')
-        convertToMd(@model, @field)
-        Records.users.saveExperience('html-editor.uses-markdown')
+    toggleExpanded() {
+      this.expanded = !this.expanded;
+      Records.users.saveExperience('html-editor.expanded', this.expanded);
+    },
 
-    toggleExpanded: ->
-      if !@expanded
-        @expanded = true
-        Records.users.saveExperience('html-editor.expanded')
-      else
-        @expanded = false
-        Records.users.removeExperience('html-editor.expanded')
+    setLinkUrl() {
+      if (this.linkUrl) {
+        if (!this.linkUrl.includes("://")) { this.linkUrl = "http://".concat(this.linkUrl); }
+        this.editor.chain().setLink({href: this.linkUrl}).focus().run();
+        this.fetchLinkPreviews([this.linkUrl]);
+        this.linkUrl = null;
+      }
+      this.linkDialogIsOpen = false;
+    },
 
-    setLinkUrl: (command) ->
-      if @linkUrl
-        @linkUrl = "http://".concat(@linkUrl) unless @linkUrl.includes("://")
-        command({ href: @linkUrl })
-        @linkUrl = null
-      @linkDialogIsOpen = false
-      @editor.focus()
+    setIframeUrl() {
+      if (!isValidHttpUrl(this.iframeUrl)) { return; }
+      this.editor.chain().setIframe({src: getEmbedLink(this.iframeUrl)}).focus().run();
+      this.iframeUrl = null;
+      this.iframeDialogIsOpen = false;
+    },
 
-    setIframeUrl: (command) ->
-      command({ src: getEmbedLink(@iframeUrl) })
-      @iframeUrl = null
-      @iframeDialogIsOpen = false
-      @editor.focus()
+    emojiPicked(shortcode, unicode) {
+      this.editor.chain()
+          .insertContent(unicode)
+          .focus()
+          .run();
+      this.closeEmojiMenu = false;
+    },
 
-    emojiPicked: (shortcode, unicode) ->
-      { view } = this.editor
-      insertText(unicode)(view.state, view.dispatch, view)
-      @closeEmojiMenu = false
-      @editor.focus()
+    updateModel() {
+      if (this.format !== 'html') { return; }
+      this.model[this.field] = this.editor.getHTML();
+      this.updateFiles();
+    },
 
-    updateModel: ->
-      @model[@field] = @editor.getHTML()
-      @updateFiles()
+    removeLinkPreview(url) {
+      this.model.linkPreviews = reject(this.model.linkPreviews, p => p.url === url);
+    },
 
-  beforeDestroy: ->
-    @editor.destroy() if @editor
-    # @socket.close() if @socket
+    scrapeLinkPreviews: throttle(function() {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(this.editor.getHTML(), 'text/html');
+      this.fetchLinkPreviews(difference((Array.from(doc.querySelectorAll('a')).map(el => el.href)), this.fetchedUrls));
+    }
+    ,
+      500
+    ,
+      {leading: false}),
+
+    fetchLinkPreviews(urls) {
+      if (urls.length) {
+        this.fetchedUrls = uniq(this.fetchedUrls.concat(urls));
+        Records.remote.post('link_previews', {urls, discussion_id: this.model.discussionId}).then(data => {
+          this.model.linkPreviews = uniqBy(this.model.linkPreviews.concat(data.previews), 'url');
+        });
+      }
+    }
+  },
+
+  beforeDestroy() {
+    if (this.editor) { this.editor.destroy(); }
+  }
+};
+  // @socket.close() if @socket
 
 </script>
 
@@ -221,234 +313,160 @@ export default
 div
   //- template(v-if="!editor || loading")
   //-   | Connecting to socket server …
-  .editor.mb-3
-    editor-content.html-editor__textarea(ref="editor" :editor='editor').lmo-markdown-wrapper
-    editor-menu-bar.menubar(:editor='editor' v-slot='{ commands, isActive, focused }')
-      v-card(flat)
-        v-layout(align-center v-if="isActive.table()")
-          v-btn(icon @click="commands.deleteTable" :title="$t('formatting.remove_table')")
-            v-icon mdi-table-remove
-          v-btn(icon @click="commands.addColumnBefore" :title="$t('formatting.add_column_before')")
-            v-icon mdi-table-column-plus-before
-          v-btn(icon @click="commands.addColumnAfter" :title="$t('formatting.add_column_after')")
-            v-icon mdi-table-column-plus-after
-          v-btn(icon @click="commands.deleteColumn" :title="$t('formatting.remove_column')")
-            v-icon mdi-table-column-remove
-          v-btn(icon @click="commands.addRowBefore" :title="$t('formatting.add_row_before')")
-            v-icon mdi-table-row-plus-before
-          v-btn(icon @click="commands.addRowAfter" :title="$t('formatting.add_row_after')")
-            v-icon mdi-table-row-plus-after
-          v-btn(icon @click="commands.deleteRow" :title="$t('formatting.remove_row')")
-            v-icon mdi-table-row-remove
-          v-btn(icon @click="commands.toggleCellMerge" :title="$t('formatting.merge_selected')")
-            v-icon mdi-table-merge-cells
+  .editor(v-if="editor")
+    editor-content.html-editor__textarea(ref="editor", :editor='editor').lmo-markdown-wrapper
+    v-sheet.menubar
+      div
+        v-layout(align-center v-if="editor.isActive('table')")
+          v-btn(icon @click="editor.chain().deleteTable().focus().run()", :title="$t('formatting.remove_table')")
+            common-icon(small name="mdi-table-remove")
+          v-btn(icon @click="editor.chain().addColumnBefore().focus().run()", :title="$t('formatting.add_column_before')")
+            common-icon(small name="mdi-table-column-plus-before")
+          v-btn(icon @click="editor.chain().addColumnAfter().focus().run()", :title="$t('formatting.add_column_after')")
+            common-icon(small name="mdi-table-column-plus-after")
+          v-btn(icon @click="editor.chain().deleteColumn().focus().run()", :title="$t('formatting.remove_column')")
+            common-icon(small name="mdi-table-column-remove")
+          v-btn(icon @click="editor.chain().addRowBefore().focus().run()", :title="$t('formatting.add_row_before')")
+            common-icon(small name="mdi-table-row-plus-before")
+          v-btn(icon @click="editor.chain().addRowAfter().focus().run()", :title="$t('formatting.add_row_after')")
+            common-icon(small name="mdi-table-row-plus-after")
+          v-btn(icon @click="editor.chain().deleteRow().focus().run()", :title="$t('formatting.remove_row')")
+            common-icon(small name="mdi-table-row-remove")
+          v-btn(icon @click="editor.chain().mergeOrSplit().focus().run()", :title="$t('formatting.merge_selected')")
+            common-icon(small name="mdi-table-merge-cells")
 
-        v-layout.py-2.justify-space-between.flex-wrap(align-center)
-          section.d-flex.flex-wrap(:aria-label="$t('formatting.formatting_tools')")
-            //- attach
-            v-btn(icon @click='$refs.filesField.click()' :title="$t('formatting.attach')")
-              v-icon mdi-paperclip
+        .d-flex.py-2.justify-space-between.flex-wrap.align-center(align-center)
+          section.d-flex.flex-wrap.formatting-tools(:aria-label="$t('formatting.formatting_tools')")
+            v-menu(:close-on-content-click="false" v-model="closeEmojiMenu")
+              template(v-slot:activator="{on, attrs}")
+                v-btn.emoji-picker__toggle(:small="expanded" v-on="on" v-bind="attrs" icon :title="$t('formatting.insert_emoji')")
+                  common-icon(small name="mdi-emoticon-outline")
+              emoji-picker(:insert="emojiPicked")
 
-            //- v-btn(icon @click='$refs.imageFilesField.click()' :title="$t('formatting.insert_image')")
-            //-   v-icon mdi-image
+            v-btn(:small="expanded" icon @click='$refs.filesField.click()' :title="$t('formatting.attach')")
+              common-icon(small name="mdi-paperclip")
+
+            v-btn(:small="expanded" icon @click='$refs.imagesField.click()' :title="$t('formatting.insert_image')")
+              common-icon(small name="mdi-image")
+
+            v-btn(:small="expanded" icon @click='openRecordAudioModal' :title="$t('record_modal.record_audio')")
+              common-icon(small name="mdi-microphone")
+
+            v-btn(:small="expanded" icon @click='openRecordVideoModal' :title="$t('record_modal.record_video')")
+              common-icon(small name="mdi-video")
 
             //- link
-            v-menu(:close-on-content-click="!selectedText()" v-model="linkDialogIsOpen" min-width="320px")
+            v-menu(:close-on-content-click="!selectedText()", v-model="linkDialogIsOpen", min-width="320px")
               template(v-slot:activator="{on, attrs}")
-                v-btn(icon v-on="on" v-bind="attrs" :title="$t('formatting.link')")
-                  v-icon mdi-link
+                template(v-if="editor.isActive('link')")
+                  v-btn(:small="expanded" icon @click="editor.chain().toggleLink().focus().run()", outlined :title="$t('formatting.link')")
+                    common-icon(small name="mdi-link-variant")
+                template(v-else)
+                  v-btn(:small="expanded" icon v-on="on" v-bind="attrs", :title="$t('formatting.link')")
+                    common-icon(small name="mdi-link-variant")
               v-card
                 template(v-if="selectedText()")
                   v-card-title.title(v-t="'text_editor.insert_link'")
                   v-card-text
-                    v-text-field(type="url" label="https://www.example.com" v-model="linkUrl" autofocus ref="focus" v-on:keyup.enter="setLinkUrl(commands.link)")
+                    v-text-field(type="url" label="https://www.example.com" v-model="linkUrl" autofocus ref="focus" v-on:keyup.enter="setLinkUrl()")
                   v-card-actions
                     v-spacer
-                    v-btn(color="primary" @click="setLinkUrl(commands.link)" v-t="'common.action.apply'")
+                    v-btn(small color="primary" @click="setLinkUrl()" v-t="'common.action.apply'")
                 template(v-else)
                   v-card-title(v-t="'text_editor.select_text_to_link'")
 
-            //- emoji
-            v-menu(:close-on-content-click="false" v-model="closeEmojiMenu")
-              template(v-slot:activator="{on, attrs}")
-                v-btn.emoji-picker__toggle(v-on="on" v-bind="attrs" icon  :title="$t('formatting.insert_emoji')")
-                  v-icon mdi-emoticon-outline
-              emoji-picker(:insert="emojiPicked")
-
-            //- headings menu
-            //- v-menu
-            //-   template(v-slot:activator="{ on, attrs }")
-            //-     v-btn.drop-down-button(icon v-on="on" v-bind="attrs" :title="$t('formatting.heading_size')")
-            //-       v-icon mdi-format-size
-            //-       v-icon.menu-down-arrow mdi-menu-down
-            //-   v-list(dense)
-            //-     template(v-for="i in 3")
-            //-       v-list-item(@click='commands.heading({ level: i })' :class="{ 'v-list-item--active': isActive.heading({level: i}) }")
-            //-         v-list-item-icon
-            //-           v-icon {{'mdi-format-header-'+i}}
-            //-         v-list-item-title(v-t="'formatting.heading'+i")
-            //-     v-list-item(@click='commands.paragraph()' :class="{ 'v-list-item--active': isActive.paragraph() }")
-            //-       v-list-item-icon
-            //-         v-icon mdi-format-pilcrow
-            //-       v-list-item-title(v-t="'formatting.paragraph'")
 
             template(v-if="expanded")
-              v-btn(icon @click='commands.paragraph()' :outlined="isActive.paragraph()" :title="$t('formatting.paragraph')")
-                v-icon mdi-format-pilcrow
-              template(v-for="i in 3")
-                v-btn(icon @click='commands.heading({ level: i })' :outlined='isActive.heading({level: i})' :title="$t('formatting.heading'+i)")
-                  v-icon {{'mdi-format-header-'+i}}
+              //- v-btn(icon @click='editor.chain().focus().setParagraph().run()' :outlined="editor.isActive('paragraph')" :title="$t('formatting.paragraph')")
+              //-   common-icon(small name="mdi-format-pilcrow")
+              template(v-for="i in [1,2,3]")
+                v-btn(small icon @click='editor.chain().focus().toggleHeading({ level: i }).run()', :outlined="editor.isActive('heading', { level: i })", :title="$t('formatting.heading'+i)")
+                  common-icon(small :name="'mdi-format-header-'+i")
 
             //- bold
-
-            v-btn(icon v-if="expanded" @click='commands.bold' :outlined="isActive.bold()" :title="$t('formatting.bold')")
-              v-icon mdi-format-bold
+            v-btn(small icon v-if="expanded", @click='editor.chain().toggleBold().focus().run()', :outlined="editor.isActive('bold')", :title="$t('formatting.bold')")
+              common-icon(small name="mdi-format-bold")
 
             //- italic
-            v-btn(icon v-if="expanded" @click='commands.italic' :outlined="isActive.italic()" :title="$t('formatting.italicize')")
-              v-icon mdi-format-italic
-
-            //- strikethrought
-            v-btn(icon v-if="expanded" :outlined="isActive.strike()", @click='commands.strike' :title="$t('formatting.strikethrough')")
-              v-icon mdi-format-strikethrough
+            v-btn(small icon v-if="expanded" @click='editor.chain().toggleItalic().focus().run()', :outlined="editor.isActive('italic')", :title="$t('formatting.italicize')")
+              common-icon(small name="mdi-format-italic")
+            //-
+            //- //- strikethrough
+            v-btn(small icon v-if="expanded" @click='editor.chain().toggleStrike().focus().run()', :outlined="editor.isActive('strike')",  :title="$t('formatting.strikethrough')")
+              common-icon(small name="mdi-format-strikethrough")
             //- underline
-            v-btn(icon v-if="expanded" :outlined="isActive.underline()", @click='commands.underline' :title="$t('formatting.underline')")
-              v-icon mdi-format-underline
+            //- v-btn(icon v-if="expanded" @click='editor.chain().toggleUnderline().focus().run()' :outlined="editor.isActive('underline')",  :title="$t('formatting.underline')")
+            //-   common-icon(small name="mdi-format-underline")
+            //-
 
-            text-highlight-btn(v-if="expanded" :editor="editor" :commands="commands")
-            text-align-btn(v-if="expanded" :editor="editor" :commands="commands")
+            v-btn(small icon v-if="expanded" @click='editor.chain().toggleBulletList().focus().run()', :outlined="editor.isActive('bulletList')", :title="$t('formatting.bullet_list')")
+              common-icon(small name="mdi-format-list-bulleted")
+            v-btn(small icon v-if="expanded" @click='editor.chain().toggleOrderedList().focus().run()', :outlined="editor.isActive('orderedList')",  :title="$t('formatting.number_list')")
+              common-icon(small name="mdi-format-list-numbered")
+            v-btn(small icon v-if="expanded" @click='editor.chain().toggleTaskList().focus().run()', :outlined="editor.isActive('taskList')",  :title="$t('formatting.task_list')")
+              common-icon(small name="mdi-checkbox-marked-outline")
 
-            //- list menu (always a menu)
-            v-menu(v-if="expanded")
-              template(v-slot:activator="{ on, attrs }")
-                v-btn.drop-down-button(icon v-on="on" v-bind="attrs" :title="$t('formatting.lists')")
-                  v-icon mdi-format-list-bulleted
-                  v-icon.menu-down-arrow mdi-menu-down
-              v-list(dense)
-                v-list-item(@click='commands.todo_list')
-                  v-list-item-icon
-                    v-icon mdi-format-list-checks
-                  v-list-item-title(v-t="'formatting.check_list'")
-                v-list-item(@click='commands.bullet_list')
-                  v-list-item-icon
-                    v-icon mdi-format-list-bulleted
-                  v-list-item-title(v-t="'formatting.bullet_list'")
-                v-list-item(@click='commands.ordered_list')
-                  v-list-item-icon
-                    v-icon mdi-format-list-numbered
-                  v-list-item-title(v-t="'formatting.number_list'")
+            text-highlight-btn(v-if="expanded", :editor="editor")
+            text-align-btn(v-if="expanded", :editor="editor")
 
             //- extra text marks
             template(v-if="expanded")
               //- strikethrough
-              v-menu(:close-on-content-click="false" v-model="iframeDialogIsOpen" min-width="320px")
+              v-menu(small :close-on-content-click="false" v-model="iframeDialogIsOpen" min-width="320px")
                 template(v-slot:activator="{on}")
-                  v-btn(icon v-on="on" :title="$t('formatting.embed')")
-                    v-icon mdi-youtube
+                  v-btn(small icon v-on="on", :title="$t('formatting.embed')")
+                    common-icon(small name="mdi-youtube")
                 v-card
                   v-card-title.title(v-t="'text_editor.insert_embedded_url'")
                   v-card-text
-                    v-text-field(type="url" label="e.g. https://www.youtube.com/watch?v=Zlzuqsunpxc" v-model="iframeUrl" ref="focus" autofocus v-on:keyup.enter="setIframeUrl(commands.iframe)")
+                    v-text-field(type="url" label="e.g. https://www.youtube.com/watch?v=Zlzuqsunpxc" v-model="iframeUrl" ref="focus" autofocus v-on:keyup.enter="setIframeUrl()")
                   v-card-actions
                     v-spacer
-                    v-btn(color="primary" @click="setIframeUrl(commands.iframe)" v-t="'common.action.apply'")
+                    v-btn(small color="primary" @click="setIframeUrl()" v-t="'common.action.apply'")
               //- blockquote
-              v-btn(icon :outlined="isActive.blockquote()", @click='commands.blockquote' :title="$t('formatting.blockquote')")
-                v-icon mdi-format-quote-close
-              //- code block
-              v-btn(small icon :outlined="isActive.code_block()", @click='commands.code_block' :title="$t('formatting.code_block')")
-                v-icon mdi-code-braces
+              v-btn(small icon @click='editor.chain().toggleBlockquote().focus().run()', :outlined="editor.isActive('blockquote')", :title="$t('formatting.blockquote')")
+                common-icon(small name="mdi-format-quote-close")
+              //- //- code block
+              v-btn(small icon @click='editor.chain().toggleCodeBlock().focus().run()', :outlined="editor.isActive('codeBlock')", :title="$t('formatting.code_block')")
+                common-icon(small name="mdi-code-braces")
               //- embded
-              v-btn(icon @click='commands.horizontal_rule' :title="$t('formatting.divider')")
-                v-icon mdi-minus
+              v-btn(small icon @click='editor.chain().setHorizontalRule().focus().run()', :title="$t('formatting.divider')")
+                common-icon(small name="mdi-minus")
               //- table
-              v-btn(icon @click='commands.createTable({rowsCount: 3, colsCount: 3, withHeaderRow: false })' :title="$t('formatting.add_table')")
-                v-icon mdi-table
+              v-btn(small icon @click='editor.chain().insertTable({rows: 3, cols: 3, withHeaderRow: false }).focus().run()', :title="$t('formatting.add_table')", :outlined="editor.isActive('table')")
+                common-icon(small name="mdi-table")
               //- markdown (save experience)
-              v-btn(icon @click="convertToMd" :title="$t('formatting.edit_markdown')")
-                v-icon mdi-language-markdown-outline
+              v-btn(small icon @click="convertToMd", :title="$t('formatting.edit_markdown')")
+                common-icon.e2e-markdown-btn(small name="mdi-language-markdown-outline")
 
-            v-btn.html-editor__expand(v-if="!expanded" icon @click="toggleExpanded" :title="$t('formatting.expand')")
-              v-icon mdi-chevron-right
+            v-btn.html-editor__expand(v-if="!expanded" icon @click="toggleExpanded", :title="$t('formatting.expand')")
+              common-icon(small name="mdi-chevron-right")
 
-            v-btn.html-editor__expand(v-if="expanded" icon @click="toggleExpanded" :title="$t('formatting.collapse')")
-              v-icon mdi-chevron-left
+            v-btn.html-editor__expand(small v-if="expanded" icon @click="toggleExpanded", :title="$t('formatting.collapse')")
+              common-icon(small name="mdi-chevron-left")
+
           //- save button?
           v-spacer
           slot(v-if="!expanded" name="actions")
-    div.d-flex(v-if="expanded" name="actions")
+          .text-right(dense v-if="maxLength", :class="{'red--text': reasonTooLong, 'text--secondary': !reasonTooLong}")
+            span(:style="reasonTooLong ? 'font-weight: 700' : ''")
+              | {{editor.getCharacterCount()}} / {{maxLength}}
+
+    div.d-flex(v-if="expanded", name="actions")
       v-spacer
       slot(name="actions")
 
-    v-alert(v-if="maxLength && model[field] && model[field].length > maxLength" color='error')
-      span( v-t="'poll_common.too_long'")
-
-  suggestion-list(:query="query" :loading="fetchingMentions" :mentionable="mentionable" :positionStyles="suggestionListStyles" :navigatedUserIndex="navigatedUserIndex" @select-user="selectUser")
-  files-list(:files="files" v-on:removeFile="removeFile")
+  link-previews(:model="model", :remove="removeLinkPreview")
+  suggestion-list(:query="query", :loading="fetchingMentions", :mentionable="mentionable", :positionStyles="suggestionListStyles" :navigatedUserIndex="navigatedUserIndex", @select-user="selectUser")
+  files-list(:files="files", v-on:removeFile="removeFile")
 
   form(style="display: block" @change="fileSelected")
-    input(ref="filesField" type="file" name="files" multiple=true)
+    input.d-none(ref="filesField" type="file" name="files" multiple=true)
+
+  form(style="display: block", @change="imageSelected")
+    input.d-none(ref="imagesField", type="file", name="files", multiple=true)
 </template>
 <style lang="sass">
-
-// .count
-//   display: flex
-//   align-items: center
-//   font-weight: bold
-//   color: rgba(#000, 0.5)
-//   color: #27b127
-//   margin-bottom: 1rem
-//   text-transform: uppercase
-//   font-size: 0.7rem
-//   line-height: 1
-//   &:before
-//     content: ''
-//     display: inline-flex
-//     background-color: #27b127
-//     width: 0.4rem
-//     height: 0.4rem
-//     border-radius: 50%
-//     margin-right: 0.3rem
-
-
-.cursor
-  color: #222
-  text-align: center
-  border-radius: 6px 6px 6px 0px
-  padding: 5px
-  margin-left: -4.5px
-  position: absolute
-  z-index: 1
-  bottom: 5px
-  left: -50%
-  opacity: 0.85
-  white-space: nowrap
-  -webkit-touch-callout: none
-  -webkit-user-select: none
-  -khtml-user-select: none
-  -moz-user-select: none
-  -ms-user-select: none
-  user-select: none
-  &.me
-    display: none
-    &::after
-      display: none
-      border-color: inherit
-  &.inactive
-    opacity: 0.5
-    &::after
-      opacity: inherit
-      border-color: inherit
-  &::after
-    content: ""
-    position: absolute
-    top: 100%
-    left: 0%
-    border-width: 5px
-    border-style: solid
-    border-color: inherit
-    color: transparent
-
 
 .ProseMirror-widget
   position: absolute
@@ -464,8 +482,30 @@ div
 .ProseMirror [contenteditable="true"]
   white-space: pre-wrap
 
+// .ProseMirror
+//   > * + *
+//     margin-top: 0.75em
+
+/* Placeholder (at the top) */
+.ProseMirror p.is-editor-empty:first-child::before
+  content: attr(data-placeholder)
+  float: left
+  color: rgba(0,0,0,0.25)
+  pointer-events: none
+  height: 0
+
+.theme--dark
+  .ProseMirror p.is-editor-empty:first-child::before
+    color: rgba(255,255,255,0.333)
+
 .ProseMirror
   outline: none
+  min-height: 64px
+
+.theme--dark
+  progress
+    background-color: #333
+    border-color: #444
 
 progress
   width: 50%!important
@@ -494,9 +534,9 @@ progress::-moz-progress-bar
     width: 40px !important
   .menu-down-arrow
     margin-left: -10px
-  .v-btn--icon
-    width: 32px
-    height: 32px
+  // .v-btn--icon
+  //   width: 32px
+  //   height: 32px
 
   .v-btn.v-btn--icon
     min-width: 0
@@ -517,8 +557,17 @@ progress::-moz-progress-bar
 .html-editor__textarea .ProseMirror:focus
   border-bottom: 1px solid var(--v-primary-base)
 
-// .lmo-textarea img
-//   display: block
+
+// .lmo-textarea p.is-empty:first-child::before
+//   content: attr(data-empty-text)
+//   float: left
+//   color: #aaa
+//   pointer-events: none
+//   height: 0
+//
+// .lmo-textarea p.is-empty
+//   font-size: 16px
+//   padding-bottom: 16px
 
 ul[data-type="todo_list"]
   padding-left: 0
@@ -567,17 +616,38 @@ li[data-done="true"]
 li[data-done="false"]
   text-decoration: none
 
-.lmo-textarea p.is-empty:first-child::before
-  content: attr(data-empty-text)
-  float: left
-  color: #aaa
-  pointer-events: none
-  height: 0
-
-.lmo-textarea p.is-empty
-  font-size: 16px
-  padding-bottom: 16px
-
 input[type="file"]
   display: none
+
+// .html-editor__textarea, .formatted-text
+.lmo-markdown-wrapper
+  video
+    position: relative
+    width: 100%
+    height: auto
+
+  div[data-iframe-container], .iframe-container
+    position: relative
+    padding-bottom: 100/16*9%
+    height: 0
+    overflow: hidden
+    width: 100%
+    height: auto
+    margin: 0 auto
+    &.ProseMirror-selectednode
+      outline: 3px solid #68CEF8
+    iframe
+      border: 0
+      position: absolute
+      top: 0
+      left: 0
+      width: 100%
+      height: 100%
+      outline: 2px solid #68CEF8
+
+@media screen and (min-width: 960px)
+  div[data-iframe-container], .iframe-container
+    padding-bottom: 432px !important
+    max-width: 768px
+
 </style>

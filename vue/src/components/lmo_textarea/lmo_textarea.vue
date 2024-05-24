@@ -1,55 +1,62 @@
-<script lang="coffee">
-import Records from '@/shared/services/records'
-import Session from '@/shared/services/session'
-import FilesList from './files_list.vue'
-import EventBus  from '@/shared/services/event_bus'
+<script lang="js">
+import RescueUnsavedEditsService from '@/shared/services/rescue_unsaved_edits_service';
 
-# import HtmlEditor from './html_editor'
-import CollabEditor from './collab_editor'
-import MdEditor from './md_editor'
-import RescueUnsavedEditsService from '@/shared/services/rescue_unsaved_edits_service'
-
-export default
-
-
-  props:
-    model: Object
-    field: String
-    label: String
-    placeholder: String
-    maxLength: Number
-    autofocus: Boolean
+export default {
+  props: {
+    focusId: String,
+    model: Object,
+    field: String,
+    label: String,
+    placeholder: String,
+    maxLength: Number,
+    autofocus: Boolean,
     shouldReset: Boolean
+  },
 
-  components:
-    # 'html-editor': HtmlEditor
-    'md-editor': MdEditor
-    'collab-editor': CollabEditor
+  components: {
+    'md-editor': () => import('@/components/lmo_textarea/md_editor.vue'),
+    'collab-editor': () => import('@/components/lmo_textarea/collab_editor.vue')
+  },
 
-  mounted: ->
-    RescueUnsavedEditsService.add(@model)
+  mounted() {
+    RescueUnsavedEditsService.add(this.model);
+  },
 
-  computed:
-    format: ->
-      @model["#{@field}Format"]
-
-    betaFeatures: ->
-      false # Session.user().experiences['betaFeatures']
-
+  computed: {
+    format() {
+      return this.model[`${this.field}Format`];
+    }
+  }
+};
 </script>
 
 <template lang="pug">
 div
-  label.caption.v-label.v-label--active.theme--light(aria-hidden="true") {{label}}
+  label.text-caption.v-label.v-label--active(style="color: var(--text-secondary)" aria-hidden="true") {{label}}
   .lmo-textarea.pb-1
-    collab-editor(v-if="format == 'html'" :model='model' :field='field' :placeholder="placeholder" :maxLength="maxLength" :autofocus="autofocus" :shouldReset="shouldReset")
-      template(v-for="(_, name) in $scopedSlots" :slot="name" slot-scope="slotData")
-        slot(:name="name" v-bind="slotData")
-    //- html-editor(v-if="format == 'html' && !betaFeatures" :model='model' :field='field' :placeholder="placeholder" :maxLength="maxLength" :autofocus="autofocus" :shouldReset="shouldReset")
-    //-   template(v-for="(_, name) in $scopedSlots" :slot="name" slot-scope="slotData")
-    //-     slot(:name="name" v-bind="slotData")
-    md-editor(v-if="format == 'md'" :model='model' :field='field' :placeholder="placeholder" :maxLength="maxLength" :autofocus="autofocus" :shouldReset="shouldReset")
-      template(v-for="(_, name) in $scopedSlots" :slot="name" slot-scope="slotData")
+    collab-editor(
+      v-if="format == 'html'"
+      :focus-id="focusId"
+      :model='model'
+      :field='field'
+      :placeholder="placeholder"
+      :maxLength="maxLength"
+      :autofocus="autofocus"
+      :shouldReset="shouldReset"
+    )
+      template(v-for="(_, name) in $scopedSlots", :slot="name" slot-scope="slotData")
+        slot(:name="name", v-bind="slotData")
+    md-editor(
+      v-if="format == 'md'"
+      :focus-id="focusId"
+      :model='model'
+      :field='field'
+      :placeholder="placeholder"
+      :maxLength="maxLength"
+      :autofocus="autofocus"
+      :shouldReset="shouldReset"
+    )
+      template(v-for="(_, name) in $scopedSlots", :slot="name", slot-scope="slotData")
         slot(:name="name" v-bind="slotData")
 
 </template>

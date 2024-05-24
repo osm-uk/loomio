@@ -1,4 +1,17 @@
-Rails.application.config.assets.precompile += %w(basic/all.css
-  active_admin.css slack.css active_admin.js active_admin/print.css angular_ahoy.js
-  marketing.js email.css poll_mailer.css marketing/index.scss admin.css admin.js marketing/marketing.js
+Rails.application.config.assets.precompile += %w(
+  email.css
+  web.css
+  basic/all.css
+  vtfy/typography.css
+  vtfy/layout.css
+  vtfy/round.css
+  vtfy/components.css
+  vtfy/themeauto.css
+  marketing/all.css
+  active_admin.css
+  active_admin.js
+  active_admin/print.css
+  admin.css
+  admin.js
+  poll_mailer/*.png
   *.png *.jpg *.jpeg *.gif *.svg)

@@ -7,25 +7,36 @@ import LmoUrlService  from '@/shared/services/lmo_url_service'
 import openModal      from '@/shared/helpers/open_modal'
 import AppConfig      from '@/shared/services/app_config'
 import i18n from '@/i18n.coffee'
+import { hardReload } from '@/shared/helpers/window'
 
 export default new class GroupService
-  actions: (group, vm) ->
+  actions: (group) ->
     membership = group.membershipFor(Session.user())
+    
+    # email_to_group:
+    #   name: 'email_to_group.email_to_group_address'
+    #   icon: 'mdi-send'
+    #   menu: true
+    #   canPerform: -> AbilityService.canStartThread(group)
+    #   perform: ->
+    #     openModal
+    #       component: 'EmailToGroupSettings'
+    #       props:
+    #         group: group
 
-    change_volume:
-      name: 'group_page.options.email_settings'
-      icon: 'mdi-email'
+    translate_group:
+      name: 'common.action.translate'
+      icon: 'mdi-translate'
+      dock: 2
       canPerform: ->
-        AbilityService.canChangeGroupVolume(group)
+        group.description && AbilityService.canTranslate(group)
       perform: ->
-        openModal
-          component: 'ChangeVolumeForm'
-          props:
-            model: membership
+        Session.user() && group.translate(Session.user().locale)
 
     edit_group:
       name: 'group_page.options.edit_group'
       icon: 'mdi-cog'
+      menu: true
       canPerform: ->
         AbilityService.canEditGroup(group)
       perform: ->
@@ -34,9 +45,33 @@ export default new class GroupService
           props:
             group: group.clone()
 
+    change_volume:
+      name: 'user_dropdown.email_settings'
+      icon: 'mdi-email'
+      menu: true
+      canPerform: ->
+        AbilityService.canChangeGroupVolume(group)
+      perform: ->
+        openModal
+          component: 'ChangeVolumeForm'
+          props:
+            model: membership
+
+    edit_tags: 
+      icon: 'mdi-tag-outline'
+      name: 'loomio_tags.card_title'
+      menu: true
+      canPerform: -> AbilityService.canAdminister(group)
+      perform: ->
+        EventBus.$emit 'openModal',
+          component: 'TagsSelect',
+          props:
+            group: group
+
     become_coordinator:
       name: 'group_page.options.become_coordinator'
       icon: 'mdi-shield-star'
+      menu: true
       canPerform: ->
         membership && membership.admin == false &&
           (group.adminMembershipsCount == 0 or group.parentOrSelf().adminsInclude(Session.user()))
@@ -44,9 +79,30 @@ export default new class GroupService
         Records.memberships.makeAdmin(membership).then ->
           Flash.success "memberships_page.messages.make_admin_success", name: Session.user().name
 
+    chatbots:
+      name: 'chatbot.chatbots'
+      icon: 'mdi-robot'
+      menu: true
+      canPerform: ->
+        group.adminsInclude(Session.user())
+      perform: ->
+        openModal
+          component: 'ChatbotList'
+          props:
+            group: group
+
+    api_docs:
+      name: 'common.api_docs'
+      icon: 'mdi-webhook'
+      menu: true
+      canPerform: -> group.adminsInclude(Session.user())
+      perform: -> 
+        hardReload "/help/api2/?group_id=#{group.id}"
+
     group_stats:
       name: 'group_page.stats'
       icon: 'mdi-chart-bar'
+      menu: true
       canPerform: ->
         AbilityService.canAdminister(group)
       perform: ->
@@ -55,6 +111,7 @@ export default new class GroupService
     export_data:
       name: 'group_page.options.export_data'
       icon: 'mdi-database-export'
+      menu: true
       canPerform: ->
         membership && group.adminsInclude(Session.user())
       perform: ->
@@ -63,33 +120,21 @@ export default new class GroupService
           props:
             group: group
 
-    webhooks:
-      name: 'webhook.integrations'
-      icon: 'mdi-webhook'
+    manage_subscription:
+      name: 'subscription_status.manage_subscription'
+      icon: 'mdi-credit-card-outline'
+      menu: true
+      perform: ->
+        window.location = "/upgrade/#{group.id}"
       canPerform: ->
+        AppConfig.features.app.subscriptions &&
+        group.isParent() &&
         group.adminsInclude(Session.user())
-      perform: ->
-        openModal
-          component: 'WebhookList'
-          props:
-            group: group
-
-
-    configure_sso:
-      name: 'configure_sso.title'
-      icon: 'mdi-key-variant'
-      canPerform: ->
-        AppConfig.features.app.group_sso &&
-        AbilityService.canAdminister(group) && group.isParent()
-      perform: ->
-        openModal
-          component: 'InstallSamlProviderModal'
-          props:
-            group: group
 
     leave_group:
       name: 'group_page.options.leave_group'
       icon: 'mdi-exit-to-app'
+      menu: true
       canPerform: ->
         AbilityService.canRemoveMembership(membership)
       perform: ->
@@ -97,7 +142,10 @@ export default new class GroupService
           component: 'ConfirmModal'
           props:
             confirm:
-              submit:  membership.destroy
+              submit: ->
+                membership.destroy().then ->
+                  Records.discussions.find(groupId: membership.groupId).forEach (d) -> d.update(discussionReaderUserId: null)
+
               text:
                 title:    'leave_group_form.title'
                 helptext: 'leave_group_form.question'
@@ -108,6 +156,7 @@ export default new class GroupService
     destroy_group:
       name: 'delete_group_modal.title'
       icon: 'mdi-delete'
+      menu: true
       canPerform: ->
         AbilityService.canArchiveGroup(group)
       perform: ->
@@ -118,8 +167,8 @@ export default new class GroupService
             confirm:
               submit: group.destroy
               text:
-                title:    'delete_group_modal.title'
-                helptext: 'delete_group_modal.body'
+                title:    (group.isParent() && 'delete_group_modal.title') || 'delete_group_modal.subgroup_title'
+                helptext: (group.isParent() && 'delete_group_modal.parent_body') || 'delete_group_modal.body' 
                 raw_confirm_text_placeholder: i18n.t('delete_group_modal.confirm', name: confirmText)
                 confirm_text: confirmText
                 flash:    'delete_group_modal.success'

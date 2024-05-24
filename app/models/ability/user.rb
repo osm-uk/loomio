@@ -3,7 +3,7 @@ module Ability::User
     super(user)
 
     can :show, ::User do |u|
-      u.deactivated_at.nil?
+      user.is_logged_in? && u.deactivated_at.nil?
     end
 
     can [:update,
@@ -14,6 +14,14 @@ module Ability::User
 
     can [:deactivate], ::User do |u|
       (user == u || user.is_admin?) && u.deactivated_at.nil?
+    end
+
+    can [:redact], ::User do |u|
+      (user == u || user.is_admin?) && !u.email.nil?
+    end
+
+    can [:contact], ::User do |u|
+      ContactableQuery.contactable(actor: user, user: u)
     end
   end
 end

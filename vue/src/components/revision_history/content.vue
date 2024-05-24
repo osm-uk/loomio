@@ -1,72 +1,117 @@
-<script lang="coffee">
-import Records from '@/shared/services/records'
-import { exact } from '@/shared/helpers/format_time'
-import { parseISO } from 'date-fns'
-import { reject } from 'lodash'
+<script lang="js">
+import Records from '@/shared/services/records';
+import { exact } from '@/shared/helpers/format_time';
+import { parseISO } from 'date-fns';
+import { reject, map, parseInt } from 'lodash-es';
 
-import marked from 'marked'
-import {customRenderer, options} from '@/shared/helpers/marked.coffee'
-marked.setOptions Object.assign({renderer: customRenderer()}, options)
+import {marked} from 'marked';
+import {customRenderer, options} from '@/shared/helpers/marked';
+marked.setOptions(Object.assign({renderer: customRenderer()}, options));
 
-export default
-  props:
-    model: Object
+export default {
+  props: {
+    model: Object,
     version: Object
+  },
 
-  methods:
-    exact: exact
+  methods: {
+    exact
+  },
 
-  computed:
-    modelKind: -> @model.constructor.singular
+  computed: {
+    modelKind() { return this.model.constructor.singular; },
 
-    bodyField: ->
-      switch @model.constructor.singular
-        when "comment" then "body"
-        when "stance" then "reason"
-        when "discussion" then "description"
-        when "poll" then "details"
-        when "outcome" then "statement"
+    bodyField() {
+      switch (this.model.constructor.singular) {
+        case "comment": return "body";
+        case "stance": return "reason";
+        case "discussion": return "description";
+        case "poll": return "details";
+        case "outcome": return "statement";
+      }
+    },
 
-    bodyChanges: ->
-      return '' unless @version && @version.objectChanges && @version.objectChanges[@bodyField]
-      if @model[@bodyField+"Format"] == "md"
-        @version.objectChanges[@bodyField].map (val) -> marked(val || '')
-      else
-        @version.objectChanges[@bodyField]
+    bodyChanges() {
+      if (!this.version || !this.version.objectChanges || !this.version.objectChanges[this.bodyField]) { return ''; }
+      if (this.model[this.bodyField+"Format"] === "md") {
+        return this.version.objectChanges[this.bodyField].map(val => marked(val || ''));
+      } else {
+        return this.version.objectChanges[this.bodyField];
+      }
+    },
 
-    titleChanges: ->
-      (@version.objectChanges || {}).title
+    titleChanges() {
+      return (this.version.objectChanges || {}).title;
+    },
 
-    bodyLabel: ->
-      switch @model.constructor.singular
-        when "comment" then "activity_card.comment"
-        when "stance" then "poll_common.reason"
-        when "discussion" then "discussion_form.context_label"
-        when "poll" then "poll_common.details"
-        when "outcome" then "poll_common.statement"
+    bodyLabel() {
+      switch (this.model.constructor.singular) {
+        case "comment": return "activity_card.comment";
+        case "stance": return "poll_common.reason";
+        case "discussion": return "discussion_form.context_label";
+        case "poll": return "poll_common.details";
+        case "outcome": return "poll_common.statement";
+      }
+    },
 
-    objectKeys: ->
-      excl = switch @model.constructor.singular
-        when "comment" then ['body', 'body_format']
-        when "stance" then ['reason', 'reason_format']
-        when "discussion" then ['title', 'description', 'description_format']
-        when "poll" then ['title', 'details', 'details_format']
-        when "outcome" then ['statement', 'statement_format']
-      reject Object.keys(@version.objectChanges || {}), (key) -> excl.includes(key)
+    objectKeys() {
+      const excl = (() => { switch (this.model.constructor.singular) {
+        case "comment": return ['body', 'body_format'];
+        case "stance": return ['reason', 'reason_format'];
+        case "discussion": return ['title', 'description', 'description_format'];
+        case "poll": return ['title', 'details', 'details_format'];
+        case "outcome": return ['statement', 'statement_format'];
+      } })();
+      return reject(Object.keys(this.version.objectChanges || {}), key => excl.includes(key));
+    },
 
-    otherFields: ->
-      console.log "otherFields", @objectKeys
-      @objectKeys.map (key) =>
-        vals = @version.objectChanges[key].map (v) =>
-          if v
-            (key.match(/_at$/) && exact(parseISO(v))) || v
-          else
-            @$t('common.empty')
-        {key: key, was: vals[0], now: vals[1]}
+    otherFields() {
+      return this.objectKeys.map(key => {
+        const vals = this.version.objectChanges[key].map(v => {
+          if (v) {
+            return (key.match(/_at$/) && exact(parseISO(v))) || v;
+          } else {
+            return this.$t('common.empty');
+          }
+        });
+        return {key, was: vals[0], now: vals[1]};
+    });
+    },
 
-    labelFor: (field) ->
-      # setup a case soon
-      field
+    stanceChoices() {
+      if ((this.model.constructor.singular === "stance") && this.version.objectChanges['option_scores']) {
+        const was = this.version.objectChanges['option_scores'][0];
+        const now = this.version.objectChanges['option_scores'][1];
+        const wasChoices = map(was, (score, pollOptionId) => {
+          const option = Records.pollOptions.find(parseInt(pollOptionId));
+          // option = @model.poll().pollOptions().find( (o) -> o.id == parseInt(pollOptionId) )
+          return {
+            name: option.optionName(),
+            color: option.color,
+            score
+          };
+        });
+        const nowChoices = map(now, (score, pollOptionId) => {
+          // option = @model.poll().pollOptions().find( (o) -> o.id == parseInt(pollOptionId) )
+          const option = Records.pollOptions.find(parseInt(pollOptionId));
+          return {
+            name: option.optionName(),
+            color: option.color,
+            score
+          };
+        });
+        return {was: wasChoices, now: nowChoices};
+      } else {
+        return false;
+      }
+    },
+
+    labelFor(field) {
+      // setup a case soon
+      return field;
+    }
+  }
+};
 
 </script>
 
@@ -75,19 +120,32 @@ export default
 .revision-history-content
   .mb-3(v-if="titleChanges")
     v-label(v-t="'discussion_form.title_label'")
-    html-diff.headline(:before="titleChanges[0]" :after="titleChanges[1]")
+    html-diff.text-h5(:before="titleChanges[0]" :after="titleChanges[1]")
 
-  .mb-3(v-if="otherFields.length")
+  .mb-3(v-if="!stanceChoices && otherFields.length")
     v-simple-table(dense)
-      tr
-        th(v-t="'revision_history_modal.field'")
-        th(v-t="'revision_history_modal.before'")
-        th(v-t="'revision_history_modal.after'")
-      tr(v-for="field in otherFields")
-        td {{field.key}}
-        td {{field.was}}
-        td {{field.now}}
+      thead
+        tr
+          th(v-t="'revision_history_modal.field'")
+          th(v-t="'revision_history_modal.before'")
+          th(v-t="'revision_history_modal.after'")
+      tbody
+        tr(v-for="field in otherFields")
+          td {{field.key}}
+          td {{field.was}}
+          td {{field.now}}
 
+  .mb-3(v-if="stanceChoices")
+    .text-secondary(v-t="'revision_history_modal.before'")
+    v-simple-table.mb-4(dense)
+      tr(v-for="choice in stanceChoices.was")
+        td(:style="'border-left: 2px solid '+choice.color") {{choice.name}}
+        td {{choice.score}}
+    .text-secondary(v-t="'revision_history_modal.after'")
+    v-simple-table.mb-4(dense)
+      tr(v-for="choice in stanceChoices.now")
+        td(:style="'border-left: 2px solid '+choice.color") {{choice.name}}
+        td {{choice.score}}
   .mb-3(v-if="bodyChanges")
     v-label(v-t="bodyLabel")
     html-diff.lmo-markdown-wrapper(:before="bodyChanges[0]" :after="bodyChanges[1]")

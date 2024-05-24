@@ -1,39 +1,46 @@
-<script lang="coffee">
+<script lang="js">
+import { emojisByCategory, srcForEmoji } from '@/shared/helpers/emojis';
+import { pick } from 'lodash-es';
 
-import { emojisByCategory, srcForEmoji, emojiSupported } from '@/shared/helpers/emojis'
-import { each, keys, pick } from 'lodash'
-
-export default
-  props:
-    insert:
-      type: Function
+export default {
+  props: {
+    isPoll: Boolean,
+    insert: {
+      type: Function,
       required: true
+    }
+  },
 
-  data: ->
-    search: ''
-    emojiSupported: emojiSupported
-    showMore: false
+  data() {
+    return {
+      search: '',
+      showMore: false
+    };
+  },
 
-  methods:
-    srcForEmoji: srcForEmoji
+  methods: {
+    srcForEmoji
+  },
 
-  computed:
-    emojis: ->
-      if @showMore
-        emojisByCategory
-      else
-        pick(emojisByCategory, ['common', 'hands', 'expressions'])
+  computed: {
+    emojis() {
+      if (this.showMore) {
+        return emojisByCategory;
+      } else {
+        return pick(emojisByCategory, ['common', 'hands', 'expressions']);
+      }
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
-.emoji-picker
+v-sheet.emoji-picker.pa-2
   div(v-for='(emojiGroup, category) in emojis', :key='category')
     h5(v-t="'emoji_picker.'+category")
-    div.emoji-picker__emojis(v-if="emojiSupported")
+    div.emoji-picker__emojis
       span(v-for='(emoji, emojiName) in emojiGroup' :key='emojiName' @click='insert(emojiName, emoji)' :title='emojiName') {{ emoji }}
-    div.emoji-picker__emojis(v-else)
-      img(v-for='(emoji, emojiName) in emojiGroup' :key='emojiName' @click='insert(emojiName, emoji)' :alt="emojiName" :src="srcForEmoji(emoji)")
   .d-flex.justify-center.pb-2
     v-btn(v-if="!showMore" x-small @click.stop="showMore = true" v-t="'common.action.show_more'")
     v-btn(v-if="showMore" x-small @click.stop="showMore = false" v-t="'common.action.show_fewer'")
@@ -41,8 +48,6 @@ export default
 
 <style lang="sass">
 .emoji-picker
-  padding: 8px
-  background-color: #fff
   max-width: 240px
   max-height: 400px
   overflow-y: auto
@@ -54,12 +59,12 @@ export default
   display: flex
   flex-direction: row
   flex-wrap: wrap
-  font-size: 48px
+  font-size: 36px
   margin-bottom: 16px
 
   img, span
-    width: 48px
-    height: 48px
+    width: 40px
+    height: 40px
     cursor: pointer
     text-align: center
     display: block

@@ -30,6 +30,55 @@ describe API::V1::MembershipsController do
     sign_in user
   end
 
+  describe 'user_name' do
+    let(:unverified_user) { create :user, email_verified: false }
+
+    before do
+      group.add_member!(unverified_user)
+    end
+
+    it 'allows group admin to set name of unverified user' do
+      unverified_user.update(name: 'present')
+      post :user_name, params: {id: unverified_user.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 200
+      expect(unverified_user.reload.name).to eq "celine"
+      expect(unverified_user.reload.username).to eq "diva99"
+    end
+
+    it 'allows group admin to set name of verified, nil name user' do
+      user_named_biff.update(email_verified: true, name: nil)
+      post :user_name, params: {id: user_named_biff.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 200
+      expect(user_named_biff.reload.name).to eq "celine"
+      expect(user_named_biff.reload.username).to eq "diva99"
+    end
+
+    it 'allows group admin to set name of verified, blank name user' do
+      user_named_biff.update(email_verified: true, name: '')
+      post :user_name, params: {id: user_named_biff.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 200
+      expect(user_named_biff.reload.name).to eq "celine"
+      expect(user_named_biff.reload.username).to eq "diva99"
+    end
+
+    it 'disallows admin to set name,username of unverified user in other group' do
+      Membership.where(group_id: group.id, user_id: unverified_user.id).delete_all
+      post :user_name, params: {id: unverified_user.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 403
+    end
+
+    it 'disallows non admin to set name,username of unverified user' do
+      sign_in user_named_biff
+      post :user_name, params: {id: unverified_user.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 403
+    end
+
+    it 'disallows group admin to set name,username of verified user' do
+      post :user_name, params: {id: user_named_biff.id, name: 'celine', username: 'diva99'}
+      expect(response.status).to eq 403
+    end
+  end
+
   describe 'create' do
     it 'sets the membership volume' do
       new_group = FactoryBot.create(:group)
@@ -51,27 +100,32 @@ describe API::V1::MembershipsController do
 
   describe 'resend' do
     let(:group) { create :group }
-    let(:discussion) { create :discussion }
-    let(:poll) { create :poll }
-    let(:user) { create :user }
-    let(:group_invite) { create :membership, accepted_at: nil, inviter: user, group: group }
+    let(:admin) { create :user }
+    let(:member) { create :user }
+    let(:membership) { create :membership, accepted_at: nil, inviter: admin, group: group }
 
-    before { sign_in user }
+    before do
+      group.add_admin! admin
+      group.add_member! member
+    end
 
     it 'can resend a group invite' do
-      expect { post :resend, params: { id: group_invite.id } }.to change { ActionMailer::Base.deliveries.count }.by(1)
+      sign_in admin
+      expect { post :resend, params: { id: membership.id } }.to change { ActionMailer::Base.deliveries.count }.by(1)
       expect(response.status).to eq 200
     end
 
-    it 'does not send if not the inviter' do
-      group_invite.update(inviter: create(:user))
-      expect { post :resend, params: { id: group_invite.id } }.to_not change { ActionMailer::Base.deliveries.count }
+    it 'does not send if not group admin' do
+      sign_in member
+      membership.update(inviter: create(:user))
+      expect { post :resend, params: { id: membership.id } }.to_not change { ActionMailer::Base.deliveries.count }
       expect(response.status).to eq 403
     end
 
     it 'does not send if accepted' do
-      group_invite.update(accepted_at: 1.day.ago)
-      expect { post :resend, params: { id: group_invite.id } }.to_not change { ActionMailer::Base.deliveries.count }
+      sign_in admin
+      membership.update(accepted_at: 1.day.ago)
+      expect { post :resend, params: { id: membership.id } }.to_not change { ActionMailer::Base.deliveries.count }
       expect(response.status).to eq 403
     end
   end
@@ -234,11 +288,6 @@ describe API::V1::MembershipsController do
       membership = create(:membership)
       post :save_experience, params: { id: membership.id, experience: :happiness }
       expect(response.status).to eq 403
-    end
-
-    it 'responds with bad request when no experience is given' do
-      membership = create(:membership)
-      expect { post :save_experience }.to raise_error { ActionController::ParameterMissing }
     end
   end
 end

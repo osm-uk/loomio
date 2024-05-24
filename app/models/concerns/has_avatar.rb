@@ -3,12 +3,6 @@ module HasAvatar
   include Routing
   extend ActiveSupport::Concern
 
-  AVATAR_SIZES = {
-    small:  30,
-    medium: 50,
-    large:  170,
-  }.with_indifferent_access.freeze
-
   included do
     include Gravtastic
     gravtastic rating: :pg, default: :none
@@ -16,10 +10,12 @@ module HasAvatar
   end
 
   def set_default_avatar_kind
-    self.avatar_kind = if has_gravatar?
-      :gravatar
+    if uploaded_avatar.attached?
+      self.avatar_kind = :uploaded
+    elsif has_gravatar?
+      self.avatar_kind = :gravatar
     else
-      :initials
+      self.avatar_kind = :initials
     end
   end
 
@@ -29,28 +25,49 @@ module HasAvatar
     super
   end
 
-  def uploaded_avatar(size)
-    # NOOP: override for users who can upload avatars
+  def thumb_url
+    avatar_url(128)
   end
 
-  def avatar_url(size = :medium)
-    case avatar_kind.to_sym
-    when :gravatar then gravatar_url(size: AVATAR_SIZES[size])
-    when :uploaded then uploaded_avatar.url(size)
+  def avatar_url(size = 512)
+    if avatar_kind == 'uploaded' && (!uploaded_avatar.attached? or uploaded_avatar.attachment.nil?)
+      update_columns(avatar_kind: set_default_avatar_kind)
     end
-  end
 
-  def absolute_avatar_url(size = :medium)
-    url = avatar_url(size)
-    if url =~ /https:\/\//
-      url
-    elsif url
-      [root_url(default_url_options).chomp('/'), url].join
-    elsif self == User.helper_bot
-      self.avatar_url
+    case avatar_kind
+    when 'gravatar'
+      gravatar_url(size: size, secure: true, default: 'retro')
+    when 'uploaded'
+      uploaded_avatar_url(size)
     else
-      User.helper_bot.absolute_avatar_url
+      nil
     end
+  rescue ActiveStorage::UnrepresentableError
+    update_columns(avatar_kind: :initials)
+    nil
+  end
+
+  def avatar_initials_url(size = 256)
+    colors = AppConfig.theme[:brand_colors].slice(:gold, :sky, :wellington, :sunset).values
+    color = colors[id % colors.length].gsub('#','')
+    params = {
+      name: String(avatar_initials).split('').join('+'),
+      background: colors[id % colors.length].gsub('#',''),
+      color: '000000',
+      rounded: true,
+      format: :png,
+      size: size
+    }
+    "https://ui-avatars.com/api/?#{params.to_a.map{|p| p.join('=')}.join('&')}"
+  end
+
+  def uploaded_avatar_url(size = 512)
+    size = size.to_i
+    return unless uploaded_avatar.attached?
+    Rails.application.routes.url_helpers.rails_representation_path(
+        uploaded_avatar.representation(resize_to_limit: [size,size], saver: {quality: 80, strip: true}),
+        only_path: true
+    )
   end
 
   def has_gravatar?(options = {})

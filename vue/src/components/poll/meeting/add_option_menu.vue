@@ -1,44 +1,40 @@
-<script lang="coffee">
-import Records from '@/shared/services/records'
-import Flash   from '@/shared/services/flash'
-import { exact }   from '@/shared/helpers/format_time'
+<script lang="js">
+import Records from '@/shared/services/records';
+import Session from '@/shared/services/session';
+import Flash   from '@/shared/services/flash';
+import { exact }   from '@/shared/helpers/format_time';
 
-import { format, utcToZonedTime } from 'date-fns-tz'
-import { isSameYear, startOfHour }  from 'date-fns'
+import { format, utcToZonedTime } from 'date-fns-tz';
+import { isSameYear, startOfHour }  from 'date-fns';
 
-export default
-  props:
-    poll: Object
+export default {
+  props: {
+    poll: Object,
+    value: Date
+  },
 
-  created: ->
-    Records.users.fetchTimeZones().then (data) => @zoneCounts = data
+  data() {
+    return {
+      min: new Date,
+      zoneCounts: [],
+      showTimeZones: false
+    };
+  },
 
-  data: ->
-    value: startOfHour(new Date)
-    min: new Date
-    zoneCounts: []
+  computed: {
+    currentTimeZone() { return Session.user().timeZone; }
+  },
 
-  methods:
-    addOption: ->
-      if @poll.addOption(@value.toJSON())
-        Flash.success('poll_meeting_form.time_slot_added')
-      else
-        Flash.error('poll_meeting_form.time_slot_already_added')
-
-    timeInZone: (zone) -> exact(@value, zone)
+  methods: {
+    timeInZone(zone) { return exact(this.value, zone); }
+  }
+};
 
 </script>
 <template lang="pug">
 .poll-meeting-add-option-menu
-  v-subheader(v-t="'poll_meeting_form.add_option_placeholder'")
-  date-time-picker(v-model="value" :min="min")
-  v-simple-table(dense style="max-height: 100px; overflow-y: scroll;")
-    tbody
-      tr(v-for="z in zoneCounts" :key="z[0]")
-        td {{z[0].replace('_',' ')}}
-        td {{timeInZone(z[0])}}
-
-  .d-flex.justify-end
-    v-btn.poll-meeting-form__option-button(color="accent" @click='addOption()' v-t="'poll_meeting_time_field.add_time_slot'")
-
+  p.text-caption.text--secondary
+    span(v-t="{path: 'poll_common_form.your_in_zone', args: {zone: currentTimeZone}}")
+    br
+    span(v-t="'poll_meeting_form.participants_see_local_times'")
 </template>

@@ -1,76 +1,111 @@
-<script lang="coffee">
-import Session        from '@/shared/services/session'
-import Records        from '@/shared/services/records'
-import AbilityService from '@/shared/services/ability_service'
-import FlashService   from '@/shared/services/flash'
-import EventBus from '@/shared/services/event_bus'
-import { snakeCase } from 'lodash'
+<script lang="js">
+import Session        from '@/shared/services/session';
+import Records        from '@/shared/services/records';
+import AbilityService from '@/shared/services/ability_service';
+import FlashService   from '@/shared/services/flash';
+import EventBus from '@/shared/services/event_bus';
+import { snakeCase } from 'lodash-es';
 
 export default
-  props:
+{
+  props: {
     membership: Object
-  methods:
-    canPerformAction: ->
-      @canSetTitle()         or
-      @canRemoveMembership() or
-      @canResendMembership() or
-      @canToggleAdmin()
+  },
 
-    canSetTitle: ->
-      AbilityService.canSetMembershipTitle(@membership)
+  methods: {
+    canPerformAction() {
+      return this.canSetTitle()        ||
+            this.canSetName()          ||
+            this.canRemoveMembership() ||
+            this.canResendMembership() ||
+            this.canToggleAdmin();
+    },
 
-    setTitle: ->
-      EventBus.$emit 'openModal',
-                      component: 'MembershipModal',
-                      props:
-                        membership: @membership.clone()
+    canSetName() {
+      return AbilityService.canAdminister(this.membership.group()) &&
+      (!this.membership.user().name || !this.membership.user().emailVerified);
+    },
 
-    canResendMembership: ->
-      AbilityService.canResendMembership(@membership)
+    canSetTitle() {
+      return AbilityService.canSetMembershipTitle(this.membership);
+    },
 
-    resendMembership: ->
-      FlashService.loading()
-      @membership.resend().then ->
-        FlashService.success "membership_dropdown.invitation_resent"
+    setName() {
+      EventBus.$emit('openModal', {
+          component: 'UserNameModal',
+          props: {
+            user: this.membership.user().clone()
+          }
+      });
+    },
 
-    canRemoveMembership: ->
-      AbilityService.canRemoveMembership(@membership)
+    setTitle() {
+      EventBus.$emit('openModal', {
+        component: 'MembershipModal',
+        props: {
+          membership: this.membership.clone()
+        }
+      });
+    },
 
-    removeMembership: ->
-      namespace = if @membership.acceptedAt then 'membership' else 'invitation'
+    canResendMembership() {
+      return AbilityService.canResendMembership(this.membership);
+    },
 
-      messages = []
-      messages.push @$t("membership_remove_modal.#{namespace}.message", { name: @membership.user().name })
+    resendMembership() {
+      return this.membership.resend().then(() => FlashService.success("membership_dropdown.invitation_resent"));
+    },
 
-      if @membership.group().parentId
-        messages.push @$t("membership_remove_modal.membership.impact_for_subgroup")
-      else
-        messages.push @$t("membership_remove_modal.membership.impact_for_group")
+    canRemoveMembership() {
+      return AbilityService.canRemoveMembership(this.membership);
+    },
 
-      EventBus.$emit 'openModal',
-                      component: 'ConfirmModal',
-                      props:
-                        confirm:
-                          membership: @membership.clone()
-                          text:
-                            title:    "membership_remove_modal.#{namespace}.title"
-                            raw_helptext: messages.join('<br>')
-                            flash:    "membership_remove_modal.#{namespace}.flash"
-                            submit:   "membership_remove_modal.#{namespace}.submit"
-                          submit:     @membership.destroy
-                          redirect:   ('dashboard' if @membership.user() == Session.user())
+    removeMembership() {
+      const namespace = this.membership.acceptedAt ? 'membership' : 'invitation';
 
-    canToggleAdmin: ->
-      (@membership.group().adminMembershipsCount == 0 and @membership.user() == Session.user()) or
-      (AbilityService.canAdminister(@membership.group()) and (!@membership.admin or @canRemoveMembership(@membership))) or
-      (@membership.userIs(Session.user()) && @membership.group().parentOrSelf().adminsInclude(Session.user()))
+      const messages = [];
+      messages.push(this.$t(`membership_remove_modal.${namespace}.message`, { name: this.membership.user().name }));
+
+      if (this.membership.group().parentId) {
+        messages.push(this.$t("membership_remove_modal.membership.impact_for_subgroup"));
+      } else {
+        messages.push(this.$t("membership_remove_modal.membership.impact_for_group"));
+      }
+
+      EventBus.$emit('openModal', {
+        component: 'ConfirmModal',
+        props: {
+          confirm: {
+            membership: this.membership.clone(),
+            text: {
+              title:    `membership_remove_modal.${namespace}.title`,
+              raw_helptext: messages.join('<br>'),
+              flash:    `membership_remove_modal.${namespace}.flash`,
+              submit:   `membership_remove_modal.${namespace}.submit`
+            },
+            submit:     this.membership.destroy,
+            redirect:   ((this.membership.user() === Session.user() ? 'dashboard' : undefined))
+          }
+        }
+      });
+    },
+
+    canToggleAdmin() {
+      return ((this.membership.group().adminMembershipsCount === 0) && (this.membership.user() === Session.user())) ||
+      (AbilityService.canAdminister(this.membership.group()) && (!this.membership.admin || this.canRemoveMembership(this.membership))) ||
+      (this.membership.userIs(Session.user()) && this.membership.group().parentOrSelf().adminsInclude(Session.user()));
+    },
 
 
-    toggleAdmin: (membership) ->
-      method = if @membership.admin then 'removeAdmin' else 'makeAdmin'
-      return if @membership.admin and @membership.user() == Session.user() and !confirm(@$t('memberships_page.remove_admin_from_self.question'))
-      Records.memberships[method](@membership).then =>
-        FlashService.success "memberships_page.messages.#{snakeCase method}_success", name: (@membership.userName() || @membership.userEmail())
+    toggleAdmin(membership) {
+      const method = this.membership.admin ? 'removeAdmin' : 'makeAdmin';
+      if (this.membership.admin && (this.membership.user() === Session.user()) && !confirm(this.$t('memberships_page.remove_admin_from_self.question'))) { return; }
+      Records.memberships[method](this.membership).then(() => {
+        FlashService.success(`memberships_page.messages.${snakeCase(method)}_success`, {name: (this.membership.userName() || this.membership.userEmail)});
+      });
+    }
+  }
+};
 </script>
 
 <template lang="pug">
@@ -79,8 +114,10 @@ export default
     template(v-slot:activator="{on, attrs}")
       v-btn.membership-dropdown__button(icon v-on="on" v-bind="attrs")
         //- span(v-t="'membership_dropdown.membership_options'")
-        v-icon mdi-dots-vertical
+        common-icon(name="mdi-dots-vertical")
     v-list.group-actions-dropdown__menu-content
+      v-list-item.membership-dropdown__set-title(v-if='canSetName()' @click='setName()')
+        v-list-item-title(v-t="'membership_dropdown.set_name_and_username'")
       v-list-item.membership-dropdown__set-title(v-if='canSetTitle()' @click='setTitle()')
         v-list-item-title(v-t="'membership_dropdown.set_title'")
       v-list-item.membership-dropdown__resend(v-if='canResendMembership()' @click='resendMembership()', :disabled='membership.resent')

@@ -1,48 +1,88 @@
-<script lang="coffee">
-import Records     from '@/shared/services/records'
-import { times } from 'lodash'
-import { hoursOfDay } from '@/shared/helpers/format_time'
-import { format, parse, isValid } from 'date-fns'
+<script lang="js">
+import Records     from '@/shared/services/records';
+import FlashService   from '@/shared/services/flash';
+import { hoursOfDay, timeFormat } from '@/shared/helpers/format_time';
+import { format, parse, isValid } from 'date-fns';
+import { mdiCalendar, mdiClockOutline } from '@mdi/js';
+import I18n from '@/i18n';
 
-export default
-  props:
-    value: Date
-    min: Date
-    dateLabel: Object
+export default {
+  props: {
+    value: Date,
+    min: Date,
+    dateLabel: Object,
     timeLabel: Object
+  },
 
-  created: ->
-    @newValue = @value
-    @dateStr = format(@value, 'yyyy-MM-dd')
-    @timeStr = format(@value, 'HH:mm')
-    @minStr  = format(@min, 'yyyy-MM-dd')
+  created() {
+    return this.newValue = this.value;
+  },
 
-  data: ->
-    dateStr: null
-    timeStr: null
-    dateMenu: false
-    times: hoursOfDay
-    validDate: (val) =>
-      isValid(parse(val, "yyyy-MM-dd", new Date()))
+  data() {
+    return {
+      mdiCalendar,
+      mdiClockOutline,
+      dateStr: (this.value && format(this.value, 'yyyy-MM-dd')) || '',
+      timeStr: (this.value && format(this.value, 'HH:mm')) || '',
+      minStr:  (this.value && format(this.min, 'yyyy-MM-dd')) || '',
+      dateMenu: false,
+      times: hoursOfDay(),
+      placeholder: format(new Date(), 'yyyy-MM-dd'),
+      validDate: val => {
+        return isValid(parse(val, "yyyy-MM-dd", new Date()));
+      }
+    };
+  },
 
+  methods: {
+    updateNewValue() {
+      const val = parse(`${this.dateStr} ${this.timeStr}`, "yyyy-MM-dd HH:mm", new Date);
+      if (!isValid(val)) { return; }
+      this.newValue = val;
+      this.$emit('input', this.newValue);
+    }
+  },
 
-  methods:
-    updateNewValue: ->
-      return unless isValid(parse("#{@dateStr} #{@timeStr}", 'yyyy-MM-dd HH:mm', new Date))
-      @newValue = parse("#{@dateStr} #{@timeStr}", 'yyyy-MM-dd HH:mm', new Date)
-      @$emit('input', @newValue)
+  watch: {
+    dateStr() { this.updateNewValue(); },
+    timeStr() { this.updateNewValue(); }
+  },
 
-  watch:
-    dateStr: -> @updateNewValue()
-    timeStr: -> @updateNewValue()
-
+  computed: {
+    twelvehour() { return timeFormat() !== 'HH:mm'; },
+    timeHint() {
+      try {
+        const d = parse(this.timeStr, 'HH:mm', new Date);
+        return format(d, timeFormat());
+      } catch (error) {
+        FlashService.error("poll_meeting_form.use_24_hour_format", {time: format(new Date, 'HH:mm')});
+        return I18n.t("poll_meeting_form.use_24_hour_format", {time: format(new Date, 'HH:mm')});
+      }
+    }
+  }
+};
 </script>
 <template lang="pug">
 v-layout.date-time-picker
   v-menu(ref='dateTimePicker' v-model='dateMenu' offset-y min-width='290px')
     template(v-slot:activator='{ on, attrs }')
-      v-text-field.date-time-picker__date-field(v-model='dateStr' v-on='on' v-bind='attrs' placeholder="2000-12-31" :rules="[validDate]" prepend-icon="mdi-calendar")
-    v-date-picker.date-time-picker__date-picker(v-model='dateStr' no-title :min='minStr' @input="dateMenu = false")
+      v-text-field.date-time-picker__date-field(
+        v-model='dateStr'
+        v-on='on'
+        v-bind='attrs'
+        :placeholder="placeholder"
+        :rules="[validDate]"
+        :prepend-icon="mdiCalendar")
+    v-date-picker.date-time-picker__date-picker(
+      v-model='dateStr'
+      no-title
+      :min='minStr'
+      @input="dateMenu = false")
   v-spacer
-  v-combobox.date-time-picker__time-field(v-model="timeStr" :items="times" prepend-icon="mdi-clock-outline")
+  v-combobox.date-time-picker__time-field(
+    :hint="twelvehour ? timeHint : null"
+    :persistent-hint="twelvehour"
+    v-model="timeStr"
+    :items="times"
+    :prepend-icon="mdiClockOutline")
 </template>

@@ -9,7 +9,6 @@ Devise.setup do |config|
   # Configure the class responsible to send e-mails.
   # config.mailer = "Devise::Mailer"
   config.parent_mailer = "BaseMailer"
-  Devise::Mailer.layout "invite_people_mailer"
   # Automatically apply schema changes in tableless databases
 
   # ==> ORM configuration
@@ -220,4 +219,7 @@ Devise.setup do |config|
   Warden::Manager.before_logout do |user,auth,opts|
     auth.cookies.delete :signed_in
   end
+
+  config.pwned_password_open_timeout = 2
+  config.pwned_password_read_timeout = 3
 end

@@ -1,82 +1,121 @@
-<script lang="coffee">
-import ThreadService  from '@/shared/services/thread_service'
-import { map, compact, pick } from 'lodash'
-import EventBus from '@/shared/services/event_bus'
-import openModal      from '@/shared/helpers/open_modal'
-import DiscussionPrivacyBadge from '@/components/discussion/privacy_badge'
+<script lang="js">
+import ThreadService  from '@/shared/services/thread_service';
+import { omit, pickBy } from 'lodash-es';
+import EventBus from '@/shared/services/event_bus';
+import Session from '@/shared/services/session';
+import openModal      from '@/shared/helpers/open_modal';
+import StrandActionsPanel from '@/components/strand/actions_panel';
 
-export default
-  props:
-    event: Object
+export default {
+  components: {
+    StrandActionsPanel
+  },
+  props: {
+    event: Object,
+    eventable: Object,
     collapsed: Boolean
+  },
 
-  data: ->
-    actions: ThreadService.actions(@event.model(), @)
+  watch: {
+    'eventable.newestFirst'() {
+      this.actions = omit(ThreadService.actions(this.eventable, this), ['dismiss_thread']);
+    }
+  },
 
-  mounted: ->
-    @event.model().fetchUsersNotifiedCount()
+  data() {
+    return {actions: omit(ThreadService.actions(this.eventable, this), ['dismiss_thread'])};
+  },
 
-  computed:
-    discussion: ->
-      @event.model()
+  mounted() {
+    this.eventable.fetchUsersNotifiedCount();
+  },
 
-    arrangementAction: -> @actions['edit_arrangement']
+  computed: {
+    author() {
+      return this.discussion.author();
+    },
 
-    editThread: -> @actions['edit_thread']
+    authorName() {
+      return this.discussion.authorName();
+    },
 
-    dockActions: ->
-      pick @actions, ['react', 'translate_thread', 'add_comment', 'subscribe', 'unsubscribe', 'unignore', 'edit_thread', 'announce_thread']
+    discussion() { return this.eventable; },
 
-    menuActions: ->
-      pick @actions, ['show_history', 'notification_history', 'close_thread', 'reopen_thread', 'move_thread', 'discard_thread', 'export_thread']
+    group() {
+      return this.discussion.group();
+    },
 
-    status: ->
-      return 'pinned' if @discussion.pinned
+    dockActions() {
+      return pickBy(this.actions, v => v.dock);
+    },
 
-    statusTitle: ->
-      @$t("context_panel.thread_status.#{@status}")
+    menuActions() {
+      return pickBy(this.actions, v => v.menu);
+    },
 
-    groups: ->
-      @discussion.group().parentsAndSelf().map (group) =>
-        text: group.name
-        disabled: false
-        to: @urlFor(group)
+    status() {
+      if (this.discussion.pinned) { return 'pinned'; }
+    },
 
-  methods:
-    viewed: (viewed) ->
-      @discussion.markAsSeen() if viewed
+    groups() {
+      return this.discussion.group().parentsAndSelf().map(group => {
+        return {
+          text: group.name,
+          disabled: false,
+          to: group.id ? this.urlFor(group) : '/threads/direct'
+        };
+      });
+    }
+  },
 
-    openArrangementForm: -> @actions['edit_arrangement'].perform()
+  methods: {
+    viewed(viewed) {
+      if (viewed && Session.isSignedIn()) { this.discussion.markAsSeen(); }
+    },
 
-    openSeenByModal: ->
-      openModal
-        component: 'SeenByModal'
-        props:
-          discussion: @discussion
+    openSeenByModal() {
+      openModal({
+        component: 'SeenByModal',
+        props: {
+          discussion: this.discussion
+        }
+      });
+    }
+  }
+};
 
 </script>
 
 <template lang="pug">
-.strand-new-discussion.context-panel#context(:aria-label="$t('context_panel.aria_intro', {author: discussion.authorName(), group: discussion.group().fullName})" v-observe-visibility="{callback: viewed, once: true}")
+.strand-new-discussion.context-panel#context(v-observe-visibility="{callback: viewed, once: true}")
   v-layout.ml-n2(align-center wrap)
-    v-breadcrumbs.context-panel__breadcrumbs(:items="groups" divider=">")
-    tags-display(:tags="discussion.tags()")
+    v-breadcrumbs.context-panel__breadcrumbs(:items="groups")
+      template(v-slot:divider)
+        common-icon(name="mdi-chevron-right")
     v-spacer
-    span
-      span.nowrap(v-show='discussion.private')
-        i.mdi.mdi-lock-outline
-        span.text--secondary(v-t="'common.privacy.private'")
-      span.nowrap(v-show='!discussion.private')
-        i.mdi.mdi-earth
-        span.text--secondary(v-t="'common.privacy.public'")
+    tags-display(:tags="discussion.tags" :group="discussion.group()")
+    v-chip(
+      v-if="discussion.private"
+      small outlined
+      :title="$t('discussion_form.privacy_private')"
+      )
+      i.mdi.mdi-lock-outline.mr-1
+      span(v-t="'common.privacy.private'")
+    v-chip(
+      v-if="!discussion.private"
+      small outlined
+      :title="$t('discussion_form.privacy_public')"
+      )
+      i.mdi.mdi-earth.mr-1
+      span(v-t="'common.privacy.public'")
 
-  strand-title.context-panel__heading(:discussion="discussion")
+  strand-title(:discussion="discussion")
 
-  .mb-2.d-flex.align-center
-    user-avatar.mr-2(:user='discussion.author()' :size='36')
-    router-link(:to="urlFor(discussion.author())") {{discussion.authorName()}}
+  .mb-4.text-body-2
+    user-avatar.mr-2(:user='author')
+    router-link.text--secondary(:to="urlFor(author)") {{authorName}}
     mid-dot
-    router-link.grey--text.body-2(:to='urlFor(discussion)')
+    router-link.text--secondary(:to='urlFor(discussion)')
       time-ago(:date='discussion.createdAt')
     span(v-show='discussion.seenByCount > 0')
       mid-dot
@@ -86,28 +125,25 @@ export default
       a.context-panel__users_notified_count(v-t="{ path: 'thread_context.count_notified', args: { count: discussion.usersNotifiedCount} }"  @click="actions.notification_history.perform")
   template(v-if="!collapsed")
     formatted-text.context-panel__description(:model="discussion" column="description")
+    link-previews(:model="discussion")
     document-list(:model='discussion')
     attachment-list(:attachments="discussion.attachments")
-    action-dock.py-2(:model='discussion' :actions='dockActions' :menu-actions='menuActions' fetch-reactions)
+    action-dock.py-2(:model='discussion' :actions='dockActions' :menu-actions='menuActions')
+  strand-actions-panel(v-if="discussion.newestFirst" :discussion="discussion")
 </template>
 <style lang="sass">
-@import '@/css/variables'
 .context-panel__heading-pin
   margin-left: 4px
 
 .context-panel
   .v-breadcrumbs
-    padding: 0px 10px
+    padding: 4px 10px 4px 10px
     // margin-left: 0;
 
 .context-panel__discussion-privacy i
   position: relative
   font-size: 14px
   top: 2px
-
-.context-panel__details
-  color: $grey-on-white
-  align-items: center
 
 .context-panel__description
   > p:last-of-type

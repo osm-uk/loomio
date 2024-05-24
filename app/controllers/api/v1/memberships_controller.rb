@@ -21,7 +21,7 @@ class API::V1::MembershipsController < API::V1::RestfulController
   def for_user
     load_and_authorize :user
     same_group_ids   = current_user.group_ids & @user.group_ids
-    public_group_ids = @user.groups.visible_to_public.pluck(:id)
+    public_group_ids = @user.groups.where(listed_in_explore: true).pluck(:id)
     instantiate_collection do |collection|
       Membership.joins(:group).where(group_id: same_group_ids + public_group_ids, user_id: @user.id).active.order('groups.full_name')
     end
@@ -65,13 +65,29 @@ class API::V1::MembershipsController < API::V1::RestfulController
     respond_with_resource
   end
 
+  def user_name
+    user = User.active.find(params[:id])
+    if (user.name.blank? || !user.email_verified) && 
+       (user.group_ids & current_user.adminable_group_ids).length > 0
+      user.update(name: params[:name], username: params[:username])
+      self.resource = user
+      respond_with_resource
+    else
+      error_response(403)
+    end
+  end
+
   private
+  def destroy_action
+    service.revoke(**{resource_symbol => resource, actor: current_user})
+  end
+  
   def valid_orders
     ['memberships.created_at', 'memberships.created_at desc', 'users.name', 'admin desc', 'accepted_at desc', 'accepted_at']
   end
 
   def index_scope
-    default_scope.merge({ include_email: model.admins.exists?(current_user.id), include_inviter: true })
+    default_scope.merge({ current_user_is_admin: model.admins.exists?(current_user.id), include_inviter: true })
   end
 
   def model

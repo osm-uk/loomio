@@ -1,31 +1,34 @@
-<script lang="coffee">
-import { approximate, exact } from '@/shared/helpers/format_time'
-import { parseISO } from 'date-fns'
-import {isString} from 'lodash'
+<script lang="js">
+import { approximate, exact } from '@/shared/helpers/format_time';
+import { parseISO } from 'date-fns';
+import {isString} from 'lodash-es';
 
-export default
-  props:
+export default {
+  props: {
     date: [Date, String]
+  },
 
-  data: ->
-    parsedDate: null
-
-  created: ->
-    if isString(@date)
-      @parsedDate = parseISO(@date)
-    else
-      @parsedDate = @date
-
+  computed: {
+    parsedDate() {
+      if (isString(this.date)) {
+        return parseISO(this.date);
+      } else {
+        return this.date;
+      }
+    }
+  }
+};
 </script>
 
 <template lang="pug">
-abbr.time-ago.text--secondary(:aria-label="$t(approximateDate(parsedDate))" :title='exactDate(parsedDate)') {{approximateDate(parsedDate)}}
+abbr.time-ago(:title='exactDate(parsedDate)') {{approximateDate(parsedDate)}}
 </template>
 
 <style lang="sass">
 .time-ago
-	white-space: nowrap
+  white-space: nowrap
 abbr[title]
-	border-bottom: none
+  text-decoration: none
+  border-bottom: none
 
 </style>

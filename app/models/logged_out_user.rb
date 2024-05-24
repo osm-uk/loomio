@@ -1,7 +1,7 @@
 class LoggedOutUser
   include Null::User
   include AvatarInitials
-  attr_accessor :name, :email, :token, :avatar_initials, :locale, :legal_accepted, :recaptcha
+  attr_accessor :name, :email, :token, :avatar_initials, :locale, :legal_accepted, :recaptcha, :time_zone, :date_time_pref, :autodetect_time_zone
 
   alias :read_attribute_for_serialization :send
 
@@ -9,15 +9,23 @@ class LoggedOutUser
     Tag.none
   end
 
-  def initialize(name: nil, email: nil, token: nil, locale: I18n.locale, params: {}, session: {})
+  def initialize(name: nil, email: nil, token: nil, locale: I18n.locale, time_zone: 'UTC', date_time_pref: 'day_abbr', params: {}, session: {})
     @name = name
     @email = email
     @token = token
     @locale = locale
+    @date_time_pref = date_time_pref
+    @time_zone = time_zone
+    @autodetect_time_zone = true
     @params = params
     @session = session
     apply_null_methods!
     set_avatar_initials if (@name || @email)
+  end
+
+
+  def name_or_username
+    @name || @username
   end
 
   def group_token
@@ -54,7 +62,7 @@ class LoggedOutUser
   end
 
   def nil_methods
-    super + [:id, :created_at, :avatar_url, :presence, :restricted, :persisted?, :secret_token, :content_locale]
+    super + [:id, :created_at, :avatar_url, :thumb_url, :presence, :restricted, :persisted?, :secret_token, :content_locale, :browseable_group_ids]
   end
 
   def false_methods

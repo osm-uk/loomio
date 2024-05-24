@@ -1,15 +1,24 @@
 be_BY:
+  start_trial:
+    your_name: Ваша імя
+    your_email: Ваш email
+  templates:
+    try_loomio: Паспрабаваць Loomio
   subscription_status:
     members: "Удзельнікі"
   loomio_tags:
     name_label: Імя
   common:
+    are_you_sure: Вы ўпэнены?
+    please_wait: Пачакайце, калі ласка
+    version: Версія
+    or: альбо
     confirm_discard_changes: Скасаваць змены?
     time:
       am: am
       pm: pm
-    closing_in: 'Закрываецца {{time}}'
-    closed_ago: 'Закрыта {{time}}'
+    closing_in: 'Закрываецца %{time}'
+    closed_ago: 'Закрыта %{time}'
     volume: 'Гучнасць'
     notification_volume: 'Гучнасць апавяшчэнняў'
     group: 'Група'
@@ -24,8 +33,6 @@ be_BY:
       yesterday: 'Учора'
       thisweek: 'На гэтым тыдні'
       thismonth: 'У гэтым месяцы'
-    models:
-      proposal: 'Прапанова'
     action:
       search: 'Пошук'
       close: 'Зачыніць'
@@ -35,6 +42,7 @@ be_BY:
       like: 'Падабаецца'
       unlike: 'Не падабаецца'
       cancel: 'Скасаваць'
+      clear: Ачысціць
   emoji_picker:
     search: Пошук
   error_page:
@@ -79,8 +87,11 @@ be_BY:
       invitation_message_label: Паведамленне
       poll_reminder:
         message_label: Паведамленне
+      wip_poll_reminder:
+        message_label: Паведамленне
   action_dock:
     edited: Адрэдагавана
+    count_members: "Удзельнікаў: %{count}"
   join_group_button:
     join_group: Далучыцца да групы
     membership_requested: Запыт чалецтва
@@ -90,6 +101,7 @@ be_BY:
     email_label: Email
   group_page:
     threads: Абмеркаванні
+    decisions: Рашэнні
     members: Удзельнікі
     settings: Налады
     options_label: 'Опцыі'
@@ -128,8 +140,17 @@ be_BY:
     username_label: 'Імя карыстальніка'
     email_label: 'Email'
     locale_label: 'Мова'
+    deactivate_account: 'Адключыць акаунт'
   change_picture_form:
     use_gravatar: 'Выкарыстоўваць Gravatar'
+  email_settings_page:
+    monday: Панядзелак
+    tuesday: Аўторак
+    wednesday: Серада
+    thursday: Чацвер
+    friday: Пятніца
+    saturday: Субота
+    sunday: Нядзеля
   dashboard_page:
     aria_label: 'Галоўная'
     mark_as_read: Адзначыць як прачытанае
@@ -150,26 +171,20 @@ be_BY:
     close_thread: 'Зачыніць'
   delete_comment_dialog:
     title: 'Выдаліць каментар'
-    question: 'Вы ўпэўнены, што хаціце выдаліць гэты каментар?'
-    confirm: 'Выдаліць каментар'
   contact_message_form:
     name_label: 'Ваша імя'
     subject_label: "Тэма"
     email_label: 'Ваш email адрас '
     message_label: 'Ваша паведамленне'
-  hint:
-    context: 'Парады, як карыстацца панэллю кантэксту'
-    discussion: 'Парады, як распачаць і ўдзельнічаць у абмеркаванні'
-    invitation: 'Парады, як пісаць файныя запрашэнні'
-    proposal: 'Парады, як пісаць зразумелыя прапановы'
-    vote: 'Вы здольны змяніць свой голас у любы час'
   poll_common:
+    proposal: Прапанова
     have_your_say: Скажыце сваё слова
     save_changes: Захаваць
   discussions_panel:
     all: Усе
     closed: Закрыта
   members_panel:
+    all: Усе
     order_by_name: 'Імя'
     header_name: 'Імя'
     header_username: 'Імя карыстальніка'
@@ -179,18 +194,20 @@ be_BY:
     closed: 'Закрыта'
   poll_common_form:
     closed: Закрыта
+  poll_proposal_options:
+    'yes': 'Так'
+    'no': 'Не'
   poll_count_options:
     'yes': 'Так'
     'no': 'Не'
   auth_form:
     name_placeholder: Ваша імя
+  chatbot:
+    username: Імя карыстальніка
+    password: Пароль
   webhook:
     name_label: Імя
   group_survey:
     categories:
       community: Група супольнасці
-      other: Іншы
-    uses:
-      other: Іншы
-    referrers:
       other: Іншы

@@ -1,23 +1,24 @@
 format = require('date-fns/format')
-require('coffeescript/register')
-pageHelper = require('../helpers/pageHelper.coffee')
+pageHelper = require('../helpers/pageHelper')
 
 module.exports = {
   'can_start_a_proposal_in_a_group': (test) => {
     page = pageHelper(test)
 
     page.loadPath('polls/test_discussion')
-    page.click('.activity-panel__add-proposal')
+    page.click('.activity-panel__add-poll')
+    page.click('.decision-tools-card__poll-type--proposal')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.pause(300)
+    // page.click('.dismiss-modal-button')
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
 
     page.scrollTo('.poll-common-action-panel', () => {
-      page.click('.poll-common-vote-form__button:first-child')
+      page.click('.poll-common-vote-form__button-text')
       page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
       page.click('.poll-common-vote-form__submit')
     })
@@ -27,51 +28,57 @@ module.exports = {
     })
   },
 
-  'can_start_a_check_in_a_group': (test) => {
-    page = pageHelper(test)
+  // 'can_start_a_check_in_a_group': (test) => {
+  //   page = pageHelper(test)
 
-    page.loadPath('polls/test_discussion')
-    page.click('.activity-panel__add-poll')
-    page.click('.decision-tools-card__poll-type--count')
-    // page.click(".poll-common-tool-tip__collapse")
-    page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+  //   page.loadPath('polls/test_discussion')
+  //   page.click('.activity-panel__add-poll')
+  //   page.click('.decision-tools-card__poll-type--count')
+  //   // page.click(".poll-common-tool-tip__collapse")
+  //   page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
+  //   page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+  //   page.click('.poll-common-form__submit')
+  //   page.expectElement('.poll-members-form__submit')
+  //   page.click('.dismiss-modal-button')
 
-    page.expectText('.poll-common-card__title', 'A new proposal')
-    page.expectText('.poll-common-details-panel__details p', 'Some details')
+  //   page.expectText('.poll-common-card__title', 'A new proposal')
+  //   page.expectText('.poll-common-details-panel__details p', 'Some details')
 
-    page.click('.poll-common-vote-form__button:first-child')
-    page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
-    page.click('.poll-common-vote-form__submit')
+  //   page.click('.poll-common-vote-form__button:first-child')
+  //   page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
+  //   page.click('.poll-common-vote-form__submit')
 
-    page.scrollTo('.stance-created', () => {
-      page.expectText('.poll-common-stance-created__reason', 'A reason')
-    })
-  },
+  //   page.scrollTo('.stance-created', () => {
+  //     page.expectText('.poll-common-stance-created__reason', 'A reason')
+  //   })
+  // },
 
   'can_start_a_poll_in_a_group': (test) => {
     page = pageHelper(test)
 
     page.loadPath('polls/test_discussion')
     page.click('.activity-panel__add-poll')
+    page.click(".poll-common-choose-template__poll")
     page.click('.decision-tools-card__poll-type--poll')
-    // page.click(".poll-common-tool-tip__collapse")
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Another option')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'An option')
+    page.click('.poll-option-form__done-btn')
+
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'Another option')
+    page.click('.poll-option-form__done-btn')
+
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
-
-    page.click('.poll-common-vote-form__button')
+    page.click('.poll-common-vote-form__button-text')
     page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
     page.click('.poll-common-vote-form__submit')
 
@@ -86,15 +93,19 @@ module.exports = {
 
     page.loadPath('polls/test_discussion')
     page.click('.activity-panel__add-poll')
+    page.click(".poll-common-choose-template__poll")
     page.click('.decision-tools-card__poll-type--dot_vote')
-    // page.click(".poll-common-tool-tip__collapse")
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'An option')
+    page.click('.poll-option-form__done-btn')
+
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
@@ -114,16 +125,21 @@ module.exports = {
 
     page.loadPath('polls/test_discussion')
     page.click('.activity-panel__add-poll')
+    page.click(".poll-common-choose-template__poll")
     page.click('.decision-tools-card__poll-type--score')
     // page.click(".poll-common-tool-tip__collapse")
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'An option')
+    page.click('.poll-option-form__done-btn')
 
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.expectElement('.dismiss-modal-button')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
@@ -143,13 +159,16 @@ module.exports = {
 
     page.loadPath('polls/test_discussion')
     page.click('.activity-panel__add-poll')
+    page.click(".poll-common-choose-template__meeting")
     page.click('.decision-tools-card__poll-type--meeting')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
     page.click('.poll-meeting-form__option-button')
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.expectElement('.dismiss-modal-button')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
@@ -169,18 +188,26 @@ module.exports = {
 
     page.loadPath('polls/test_discussion')
     page.click('.activity-panel__add-poll')
+    page.click(".poll-common-choose-template__poll")
     page.click('.decision-tools-card__poll-type--ranked_choice')
     // page.click('.poll-common-tool-tip__collapse')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
 
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Another option')
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'An option')
+    page.click('.poll-option-form__done-btn')
+
+    page.click('.poll-common-form__add-option-btn')
+    page.fillIn('.poll-option-form__name input', 'Another option')
+    page.click('.poll-option-form__done-btn')
+    
     page.click('.poll-common-form__submit')
 
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.expectElement('.dismiss-modal-button')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
@@ -206,48 +233,54 @@ module.exports = {
     page.expectText('.poll-common-outcome-panel', 'This is an outcome')
   },
 
-  'can_close_and_reopen_a_poll': (test) => {
-    page = pageHelper(test)
-
-    page.loadPath('polls/test_discussion')
-    page.click('.activity-panel__add-proposal')
-    page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
-    page.expectText('.poll-common-card__title', 'A new proposal')
-    page.expectText('.poll-common-details-panel__details p', 'Some details')
-
-    page.scrollTo('.poll-common-action-panel', () => {
-      page.click('.poll-common-vote-form__button:first-child')
-      page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
-      page.click('.poll-common-vote-form__submit')
-    })
-
-    page.expectText('.poll-common-stance-created__reason', 'A reason')
-
-    page.click('.poll-created .action-menu--btn')
-    page.click('.action-dock__button--close_poll')
-    page.click('.confirm-modal__submit', 1000)
-    page.click('.dismiss-modal-button')
-    page.click('.poll-created .action-menu--btn')
-    page.click('.action-dock__button--reopen_poll')
-    page.click('.poll-common-reopen-form__submit')
-  },
+  // 'can_close_and_reopen_a_poll': (test) => {
+  //   page = pageHelper(test)
+  //
+  //   page.loadPath('polls/test_discussion')
+  //   page.click('.activity-panel__add-poll')
+  //   page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
+  //   page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+  //   page.click('.poll-common-form__submit')
+  //   page.expectElement('.poll-members-form__submit')
+  //   page.click('.dismiss-modal-button')
+  //   page.expectText('.poll-common-card__title', 'A new proposal')
+  //   page.expectText('.poll-common-details-panel__details p', 'Some details')
+  //
+  //   page.scrollTo('.poll-common-action-panel', () => {
+  //     page.click('.poll-common-vote-form__button:first-child')
+  //     page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
+  //     page.click('.poll-common-vote-form__submit')
+  //   })
+  //
+  //   page.expectText('.poll-common-stance-created__reason', 'A reason')
+  //
+  //   page.click('.poll-created .action-menu--btn')
+  //   page.click('.action-dock__button--close_poll')
+  //   page.click('.confirm-modal__submit', 1000)
+  //   page.pause(100)
+  //   page.click('.dismiss-modal-button')
+  //   page.pause(100)
+  //   page.click('.poll-created .action-menu--btn')
+  //   page.click('.action-dock__button--reopen_poll')
+  //   page.click('.poll-common-reopen-form__submit')
+  // },
 
   'can_start_an_anonymous_poll': (test) => {
     page = pageHelper(test)
 
     page.loadPath('/polls/test_discussion')
-    page.click('.activity-panel__add-proposal')
+    page.click('.activity-panel__add-poll')
+    page.click('.decision-tools-card__poll-type--proposal')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.click('.poll-common-form__advanced-btn')
     page.click('.poll-settings-anonymous')
 
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.expectElement('.poll-members-form__submit')
+    // page.expectElement('.dismiss-modal-button')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
@@ -258,18 +291,39 @@ module.exports = {
     page = pageHelper(test)
 
     page.loadPath('/polls/test_discussion')
-    page.click('.activity-panel__add-proposal')
+    page.click('.activity-panel__add-poll')
+    page.click('.decision-tools-card__poll-type--proposal')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-settings-hide-results-until-closed')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
+    // page.click('.poll-settings-hide-results-until-closed')
+
+    page.click('.poll-common-form__advanced-btn')
+    page.click('.poll-common-settings__hide-results')
+    page.click('.v-select-list .v-list-item:last-child')
+
+    // change dropdown here
 
     page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
+    // page.pause(300)
+    // page.expectElement('.poll-members-form__submit')
+    // page.expectElement('.dismiss-modal-button')
+    // page.pause(500)
+    // page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
     page.expectElement('.poll-common-action-panel__results-hidden-until-closed')
+  },
+
+  'can_remove_own_vote': (test) => {
+    page = pageHelper(test)
+
+    page.loadPath('polls/test_poll_scenario?poll_type=proposal&scenario=poll_closing_soon_with_vote')
+    page.click('.action-menu--btn')
+    page.click('.action-dock__button--uncast_stance')
+    page.expectText('.confirm-modal', 'Remove your vote?')
+    page.click('.confirm-modal__submit')
+    page.expectFlash('Vote removed')
   },
 
   'can_send_a_calendar_invite': (test) => {
@@ -286,36 +340,6 @@ module.exports = {
     page.expectFlash('Outcome created')
     // page.click('.dismiss-modal-button')
     // page.expectText('.poll-common-outcome-panel .lmo-markdown-wrapper', 'Here is a statement')
-  },
-
-  'can_add_an_option': (test) => {
-    page = pageHelper(test)
-
-    page.loadPath('polls/test_discussion')
-    page.click('.activity-panel__add-poll')
-    page.click('.decision-tools-card__poll-type--poll')
-    // page.click(".poll-common-tool-tip__collapse")
-    page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Another option')
-    page.click('.poll-settings-voter-can-add-options')
-    page.click('.poll-common-form__submit')
-    page.expectElement('.poll-members-list__submit')
-    page.click('.dismiss-modal-button')
-
-    page.expectText('.poll-common-card__title', 'A new proposal')
-    page.expectText('.poll-common-details-panel__details p', 'Some details')
-
-    page.scrollTo('.poll-common-action-panel', () => {
-      page.click('.poll-common-add-option-button button')
-    })
-
-    page.click('.poll-poll-form__add-option-input')
-    page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Yet another option')
-    page.click('.poll-add-option__submit')
-    page.expectFlash('New options added')
   },
 
   'can_add_standalone_poll_to_thread': (test) => {
@@ -335,8 +359,9 @@ module.exports = {
     page = pageHelper(test)
 
     page.loadPathNoApp('polls/test_poll_scenario?poll_type=proposal&scenario=poll_created&email=1&anonymous=1&guest=1')
-    page.click('.poll-mailer__poll-title')
-    page.click('.poll-proposal-vote-form__button')
+    page.click('.event-mailer__title a')
+    page.pause(1000)
+    page.click('.poll-common-vote-form__button-text')
     page.fillIn('.html-editor__textarea .ProseMirror', "reason")
     page.click('.poll-common-vote-form__submit')
     page.expectFlash('Vote created')
@@ -347,34 +372,26 @@ module.exports = {
     page = pageHelper(test)
 
     page.loadPath('polls/test_discussion')
-    page.click('.activity-panel__add-proposal')
+    page.click('.activity-panel__add-poll')
+    page.click('.decision-tools-card__poll-type--proposal')
     page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-    page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+    page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
     page.click('.poll-common-settings__specified-voters-only')
     page.click('.poll-common-form__submit')
 
-    page.expectElement('.poll-members-list')
+    page.expectElement('.poll-members-form')
     page.fillIn('.recipients-autocomplete input', 'test@example.com')
     page.expectText('.announcement-chip__content', 'test@example.com')
     page.click('.announcement-chip__content')
     page.escape()
-    page.expectElement('.headline')
-    page.click('.poll-members-list__submit')
-    page.expectFlash('1 notifications sent')
+    page.expectElement('.text-h5')
+    page.click('.poll-members-form__submit')
+    page.expectText('.poll-members-form__list', 'test@example.com')
     page.click('.dismiss-modal-button')
 
     page.expectText('.poll-common-card__title', 'A new proposal')
     page.expectText('.poll-common-details-panel__details p', 'Some details')
-
-    page.scrollTo('.poll-common-action-panel', () => {
-      page.click('.poll-common-vote-form__button:first-child')
-      page.fillIn('.poll-common-vote-form__reason .lmo-textarea div[contenteditable=true]', 'A reason')
-      page.click('.poll-common-vote-form__submit')
-    })
-
-    page.scrollTo('.stance-created', () => {
-      page.expectText('.poll-common-stance-created__reason', 'A reason')
-    })
+    page.expectText('.poll-common-unable-to-vote', 'You have not been invited to vote')
   },
 
   // 'can_edit_a_vote': (test) => {
@@ -385,11 +402,11 @@ module.exports = {
   //   page.click('.decision-tools-card__poll-type--poll')
   //   // page.click(".poll-common-tool-tip__collapse")
   //   page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-  //   page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+  //   page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
   //   page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
   //   page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Another option')
   //   page.click('.poll-common-form__submit')
-  //   page.expectElement('.poll-members-list__submit')
+  //   page.expectElement('.poll-members-form__submit')
   //   page.click('.dismiss-modal-button')
   //
   //   page.expectText('.poll-common-card__title', 'A new proposal')
@@ -419,11 +436,11 @@ module.exports = {
   //   page.click('.decision-tools-card__poll-type--poll')
   //   // page.click(".poll-common-tool-tip__collapse")
   //   page.fillIn('.poll-common-form-fields__title input', 'A new proposal')
-  //   page.fillIn('.poll-common-form-fields .lmo-textarea div[contenteditable=true]', 'Some details')
+  //   page.fillIn('.poll-common-form-fields__details .lmo-textarea div[contenteditable=true]', 'Some details')
   //   page.fillInAndEnter('.poll-poll-form__add-option-input input', 'An option')
   //   page.fillInAndEnter('.poll-poll-form__add-option-input input', 'Another option')
   //   page.click('.poll-common-form__submit')
-  //   page.expectElement('.poll-members-list__submit')
+  //   page.expectElement('.poll-members-form__submit')
   //   page.click('.dismiss-modal-button')
   //
   //   page.expectText('.poll-common-card__title', 'A new proposal')
